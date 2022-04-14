@@ -10,51 +10,82 @@ namespace amongUsFinder
         {
             SearchAmongus s = new SearchAmongus();
             Thread[] threads = new Thread[4];
-            int iName = 1;
-            int iNameStop = 10330;
-            int iNameStep = 1;
-            int picturesProcessed = 0;
 
-            //Start main threads
-            Console.WriteLine("Enter start point:");
-            iName = Convert.ToInt32(Console.ReadLine());
-            Console.WriteLine("Enter stop point:");
-            iNameStop = Convert.ToInt32(Console.ReadLine());
-            Console.WriteLine("Enter step length:");
-            iNameStep = Convert.ToInt32(Console.ReadLine());
-            Console.WriteLine("Input location:");
-            string loadFolder = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
-            Console.WriteLine("Output location: ");
-            string saveFolder = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
-            threads[0] = new Thread(() => s.searchAmongus(loadFolder, saveFolder, iName + 0 * iNameStep, iNameStop, iNameStep));
-            threads[1] = new Thread(() => s.searchAmongus(loadFolder, saveFolder, iName + 1 * iNameStep, iNameStop, iNameStep));
-            threads[2] = new Thread(() => s.searchAmongus(loadFolder, saveFolder, iName + 2 * iNameStep, iNameStop, iNameStep));
-            threads[3] = new Thread(() => s.searchAmongus(loadFolder, saveFolder, iName + 3 * iNameStep, iNameStop, iNameStep));
-            for (int i = 0; i < threads.Length; i++)
+            while (true)
             {
-                threads[i].Start();
-            }
-            while (picturesProcessed < (double)(iNameStop - iName) / iNameStep)
-            {
-                picturesProcessed = Directory.GetFiles(loadFolder, "*.*", SearchOption.TopDirectoryOnly).Length;
-                Console.WriteLine($"Saved {picturesProcessed} --> {picturesProcessed / ((double)(iNameStop - iName) / iNameStep) * 100}% done");
-            }
+                //Parameter input
+                Console.WriteLine("Input location:");
+                s.loadLocation = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
+                Console.WriteLine("Output location: ");
+                s.saveLocation = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
+                Console.WriteLine("Enter start point (default: 1):");
+                string start = Console.ReadLine();
+                if (start != null) s.iName = Convert.ToInt32(start);
+                Console.WriteLine("Enter stop point (default: file number of input):");
+                string stop = Console.ReadLine();
+                if (stop != null) s.iNameStop = Convert.ToInt32(stop);
+                else s.iNameStop = Directory.GetFiles(s.loadLocation, "*.*", SearchOption.TopDirectoryOnly).Length;
+                Console.WriteLine("Enter step length (default: 1):");
+                string step = Console.ReadLine();
+                if (step != null) s.iNameStep = Convert.ToInt32(step);
+                s.amongusCount = new int[(s.iNameStop - s.iName) / s.iNameStep + 2];
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss} | Started!");
 
-            //Rename files
-            int iNew = iName;
-            for (int i = iName; i <= iNameStop; i+=4)
-            {
-                try
+                //Start main threads
+                threads[0] = new Thread(() => s.searchAmongus());
+                threads[1] = new Thread(() => s.searchAmongus(1));
+                threads[2] = new Thread(() => s.searchAmongus(2));
+                threads[3] = new Thread(() => s.searchAmongus(3));
+                for (int i = 0; i < threads.Length; i++)
                 {
-                    File.Move($"{saveFolder}{i:00000}.png", $"{saveFolder}{iNew:00000}.png");
+                    threads[i].Start();
                 }
-                catch (Exception)
+
+                //Output progress updates
+                int min = DateTime.Now.Minute;
+                while (s.picturesProcessed < (double)(s.iNameStop - s.iName) / s.iNameStep)
                 {
+                    if (min != DateTime.Now.Minute)
+                    {
+                        Console.WriteLine($"{DateTime.Now:HH:mm:ss} | {s.picturesProcessed} pictures processed --> {Math.Round(s.picturesProcessed / ((double)(s.iNameStop - s.iName) / s.iNameStep) * 100, 2)}% done");
+                        min = DateTime.Now.Minute;
+                    }
+                    Thread.Sleep(990);
                 }
-                iNew++;
+
+                //Wait for each thread to finish
+                for (int i = 0; i < threads.Length; i++)
+                {
+                    threads[i].Join();
+                }
+
+                //Rename files
+                if (s.iNameStep > 1)
+                {
+                    int iNew = 1;
+                    for (int i = s.iName; i <= s.iNameStop; i += s.iNameStep)
+                    {
+                        try
+                        {
+                            File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNew:00000}.png");
+                        }
+                        catch { }
+                        iNew++;
+                    }
+                }
+
+                //Output txt file
+                using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
+                {
+                    for (int i = 0; i < s.picturesProcessed; i++)
+                    {
+                        sr.WriteLine(s.amongusCount[i]);
+                    }
+                }
+
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss} | Finished!"); 
             }
-            Console.WriteLine("Finished! Press enter to exit");
-            Console.ReadKey();
+            //Console.ReadKey();
         }
     }
 }
