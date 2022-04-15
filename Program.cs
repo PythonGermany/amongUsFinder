@@ -17,19 +17,21 @@ namespace amongUsFinder
                 Console.WriteLine("Input location:");
                 s.loadLocation = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
                 Console.WriteLine("Output location: ");
-                s.saveLocation = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
+                string saveLoc = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
+                if (s.loadLocation != "") s.saveLocation = saveLoc;
                 Console.WriteLine("Enter start point (default: 1):");
                 string start = Console.ReadLine();
-                if (start != null) s.iName = Convert.ToInt32(start);
+                if (start != "") s.iName = Convert.ToInt32(start);
                 Console.WriteLine("Enter stop point (default: file number of input):");
                 string stop = Console.ReadLine();
-                if (stop != null) s.iNameStop = Convert.ToInt32(stop);
+                if (stop != "") s.iNameStop = Convert.ToInt32(stop);
                 else s.iNameStop = Directory.GetFiles(s.loadLocation, "*.*", SearchOption.TopDirectoryOnly).Length;
                 Console.WriteLine("Enter step length (default: 1):");
                 string step = Console.ReadLine();
-                if (step != null) s.iNameStep = Convert.ToInt32(step);
+                if (step != "") s.iNameStep = Convert.ToInt32(step);
                 s.amongusCount = new int[(s.iNameStop - s.iName) / s.iNameStep + 2];
                 Console.WriteLine($"{DateTime.Now:HH:mm:ss} | Started!");
+                Console.WriteLine(s.iNameStop);
 
                 //Start main threads
                 threads[0] = new Thread(() => s.searchAmongus());
@@ -43,11 +45,13 @@ namespace amongUsFinder
 
                 //Output progress updates
                 int min = DateTime.Now.Minute;
-                while (s.picturesProcessed < (double)(s.iNameStop - s.iName) / s.iNameStep)
+                int p = s.picturesProcessed[0] + s.picturesProcessed[1] + s.picturesProcessed[2] + s.picturesProcessed[3];
+                while (p < (double)(s.iNameStop - s.iName) / s.iNameStep)
                 {
                     if (min != DateTime.Now.Minute)
                     {
-                        Console.WriteLine($"{DateTime.Now:HH:mm:ss} | {s.picturesProcessed} pictures processed --> {Math.Round(s.picturesProcessed / ((double)(s.iNameStop - s.iName) / s.iNameStep) * 100, 2)}% done");
+                        p = s.picturesProcessed[0] + s.picturesProcessed[1] + s.picturesProcessed[2] + s.picturesProcessed[3];
+                        Console.WriteLine($"{DateTime.Now:HH:mm:ss} | {p} pictures processed --> {Math.Round(p / ((double)(s.iNameStop - s.iName) / s.iNameStep) * 100, 2)}% done");
                         min = DateTime.Now.Minute;
                     }
                     Thread.Sleep(990);
@@ -57,6 +61,11 @@ namespace amongUsFinder
                 for (int i = 0; i < threads.Length; i++)
                 {
                     threads[i].Join();
+                }
+
+                for (int i = 0; i < 4; i++)
+                {
+                    s.picturesProcessed[i] = 0;
                 }
 
                 //Rename files
@@ -77,7 +86,7 @@ namespace amongUsFinder
                 //Output txt file
                 using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
                 {
-                    for (int i = 0; i < s.picturesProcessed; i++)
+                    for (int i = 0; i < (s.iNameStop - s.iName) / s.iNameStep + 1; i++)
                     {
                         sr.WriteLine(s.amongusCount[i]);
                     }
