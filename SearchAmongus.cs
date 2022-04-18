@@ -3,7 +3,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Threading;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace amongUsFinder
 {
@@ -11,12 +10,12 @@ namespace amongUsFinder
     {
         public string loadLocation;
         public string saveLocation;
-        public int iName = 1;
-        public int iNameStop = 10330;
-        public int iNameStep = 1;
-        public int[] picturesProcessed = new int[4] {0, 0, 0, 0};
+        public int iName;
+        public int iNameStop;
+        public int iNameStep;
+        public int[] picturesProcessed;
         public int[] amongusCount;
-        
+
         public void searchAmongus(int shift = 0)
         {
             int amongUsFound;
@@ -26,6 +25,7 @@ namespace amongUsFinder
             Bitmap bmp = new Bitmap(2000, 2000);
             Graphics g = Graphics.FromImage(bmp);
             Bitmap place;
+            picturesProcessed[shift] = 0;
 
             //Loop through pictures
             for (int i = iName + shift * iNameStep; i <= iNameStop; i += 4 * iNameStep)
@@ -46,7 +46,7 @@ namespace amongUsFinder
                 {
                     threadsQ[t].Join();
                 }
-                if (saveLocation.Contains(".")) bmp.Save($"{saveLocation}" + Console.ReadLine(), ImageFormat.Png);
+                if (loadLocation.Contains(".")) bmp.Save($"{saveLocation}", ImageFormat.Png);
                 else bmp.Save($@"{saveLocation}\{i:00000}.png", ImageFormat.Png);
                 place.Dispose();
                 amongusCount[loopId] = amongUsFound;
@@ -59,41 +59,54 @@ namespace amongUsFinder
             {
                 int[] c1 = new int[3];
                 int[] c2 = new int[3];
+                //Stopwatch s = new Stopwatch();
                 int[,] amongus = new int[5, 4] { { 0, 2, 2, 2},
                                                  { 2, 2, 1, 1},
                                                  { 2, 2, 2, 2},
                                                  { 3, 2, 3, 2},
                                                  { 0, 3, 0, 3}};
                 mutex.WaitOne();
+                //if (shift == 0 && xStart == 997 && yStart == 997) s.Restart();
                 Bitmap bmpTemp = place.Clone(new Rectangle(xStart, yStart, xStop, yStop), place.PixelFormat);
                 mutex.ReleaseMutex();
                 Bitmap bmpTempF = (Bitmap)bmpTemp.Clone();
+                //if (shift == 0 && xStart == 997 && yStart == 997)
+                //{
+                //    s.Stop();
+                //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> clone bitmaps");
+                //}
 
                 unsafe
                 {
                     //Parts from this Source: http://csharpexamples.com/fast-image-processing-c/
-                    BitmapData bmpData = bmpTemp.LockBits(new Rectangle(0, 0, bmpTemp.Width, bmpTemp.Height), ImageLockMode.ReadWrite, bmpTemp.PixelFormat);
-                    BitmapData bmpDataF = bmpTempF.LockBits(new Rectangle(0, 0, bmpTempF.Width, bmpTempF.Height), ImageLockMode.ReadWrite, bmpTempF.PixelFormat);
-                    int bytesPerPixel = Bitmap.GetPixelFormatSize(bmpTempF.PixelFormat) / 8;
-                    byte* ptrFirstPixel = (byte*)bmpData.Scan0;
-                    byte* ptrFirstPixelF = (byte*)bmpDataF.Scan0;
+                    BitmapData bmpTempData = bmpTemp.LockBits(new Rectangle(0, 0, bmpTemp.Width, bmpTemp.Height), ImageLockMode.ReadWrite, bmpTemp.PixelFormat);
+                    BitmapData bmpTempDataF = bmpTempF.LockBits(new Rectangle(0, 0, bmpTempF.Width, bmpTempF.Height), ImageLockMode.ReadWrite, bmpTempF.PixelFormat);
+                    int bytesPerPixel = Image.GetPixelFormatSize(bmpTempF.PixelFormat) / 8;
+                    byte* ptrFirstPixel = (byte*)bmpTempData.Scan0;
+                    byte* ptrFirstPixelF = (byte*)bmpTempDataF.Scan0;
 
-                    //Darken backgound/output bitmap
-                    for (int y = 0; y < bmpDataF.Height; y++)
+                    //Darken backgound/output bitmap data
+                    //if (shift == 0 && xStart == 997 && yStart == 997) s.Restart();
+                    for (int y = 0; y < bmpTempDataF.Height; y++)
                     {
-                        byte* currentLine = ptrFirstPixelF + y * bmpDataF.Stride;
-                        for (int x = 0; x < bmpDataF.Width * bytesPerPixel; x += bytesPerPixel)
+                        byte* currentLine = ptrFirstPixelF + y * bmpTempDataF.Stride;
+                        for (int x = 0; x < bmpTempDataF.Stride; x += bytesPerPixel)
                         {
                             //Calculate new pixel value (R,G,B)
                             currentLine[x + 2] = (byte)(currentLine[x + 2] * 0.25);
                             currentLine[x + 1] = (byte)(currentLine[x + 1] * 0.25);
-                            currentLine[x + 0] = (byte)(currentLine[x] * 0.25);;
+                            currentLine[x] = (byte)(currentLine[x] * 0.25);
                         }
                     }
-                    // copy modified bytes back
+                    //if (shift == 0 && xStart == 997 && yStart == 997)
+                    //{
+                    //    s.Stop();
+                    //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> darken background"); 
+                    //}
                     //-------------------------------------------------------------------------------------------------
 
                     //Loop through pixel/search amongus
+                    //if (shift == 0 && xStart == 997 && yStart == 997) s.Restart();
                     for (int y = 0; y < yStop - 4; y++)
                     {
                         for (int x = 0; x < xStop - 3; x++)
@@ -166,14 +179,14 @@ namespace amongUsFinder
                                         break;
                                     }
                                 }
-                                //If amongus found --> draw amongus to output bitmap
+                                //If amongus found --> draw amongus to output bitmap data
                                 if (search)
                                 {
                                     for (int row = 0; row < 5; row++)
                                     {
                                         for (int column = 0; column < 4; column++)
                                         {
-                                            byte* currentLine = ptrFirstPixelF + (y + row) * bmpDataF.Stride;
+                                            byte* currentLine = ptrFirstPixelF + (y + row) * bmpTempDataF.Stride;
                                             if (amongus[row, column] >= 2 && compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y + row)))
                                             {
                                                 currentLine[tXco(x, column - 1.5, mirror) * bytesPerPixel + 2] = (byte)c1[0];
@@ -195,18 +208,29 @@ namespace amongUsFinder
                             }
                         }
                     }
-                    bmpTemp.UnlockBits(bmpData);
-                    bmpTempF.UnlockBits(bmpDataF);
+                    //if (shift == 0 && xStart == 997 && yStart == 997)
+                    //{
+                    //    s.Stop();
+                    //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> search amongus");
+                    //}
+                    bmpTemp.UnlockBits(bmpTempData);
+                    bmpTempF.UnlockBits(bmpTempDataF);
+                    mutex.WaitOne();
+                    //if (shift == 0 && xStart == 997 && yStart == 997) s.Restart();
+                    g.DrawImage(bmpTempF, xStart, yStart, xStop, yStop);
+                    //if (shift == 0 && xStart == 997 && yStart == 997)
+                    //{
+                    //    s.Stop();
+                    //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> draw quarter");
+                    //}
+                    mutex.ReleaseMutex();
 
                     int[] getPixelColor(int x, int y)
                     {
-                        byte* currentLine = ptrFirstPixel + y * bmpData.Stride;
+                        byte* currentLine = ptrFirstPixel + y * bmpTempData.Stride;
                         return new int[3] { currentLine[x * bytesPerPixel + 2], currentLine[x * bytesPerPixel + 1], currentLine[x * bytesPerPixel] };
                     }
                 }
-                mutex.WaitOne();
-                g.DrawImage(bmpTempF, xStart, yStart, xStop, yStop);
-                mutex.ReleaseMutex();
                 bmpTemp.Dispose();
                 bmpTempF.Dispose();
 
