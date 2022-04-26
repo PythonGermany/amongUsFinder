@@ -46,7 +46,7 @@ namespace amongUsFinder
                 {
                     threadsQ[t].Join();
                 }
-                if (loadLocation.Contains(".")) bmp.Save($"{saveLocation}", ImageFormat.Png);
+                if (loadLocation.Contains(".")) bmp.Save($"{loadLocation.Split('.')[0]}_searched.{loadLocation.Split('.')[1]}", ImageFormat.Png);
                 else bmp.Save($@"{saveLocation}\{i:00000}.png", ImageFormat.Png);
                 place.Dispose();
                 amongusCount[loopId] = amongUsFound;

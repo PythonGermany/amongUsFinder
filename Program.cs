@@ -20,12 +20,20 @@ namespace amongUsFinder
             while (true)
             {
                 //Parameter input from console
-                Console.WriteLine("Input location:");
-                s.loadLocation = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
-                Console.WriteLine("Output location: ");
-                s.saveLocation = $@"C:\Users\pythongermany\Downloads\" + Console.ReadLine();
-                if (!s.loadLocation.Contains("."))
+                Console.WriteLine($@"Input location ({Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\YOUR INPUT):");
+                s.loadLocation = $@"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\{Console.ReadLine()}";
+                if (s.loadLocation.Contains("."))
                 {
+                    s.iName = 1;
+                    s.iNameStop = 1;
+                    s.iNameStep = 1;
+                    int folderIndex = s.loadLocation.LastIndexOf(@"\");
+                    s.saveLocation = s.loadLocation.Substring(0, folderIndex);
+                }
+                else
+                {
+                    Console.WriteLine($@"Output location ({Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\YOUR INPUT):");
+                    s.saveLocation = $@"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\{Console.ReadLine()}";
                     Console.WriteLine("Enter start point (default: 1):");
                     string start = Console.ReadLine();
                     if (start != "") s.iName = Convert.ToInt32(start);
@@ -39,13 +47,7 @@ namespace amongUsFinder
                     if (step != "") s.iNameStep = Convert.ToInt32(step);
                     else s.iNameStep = 1;
                 }
-                else
-                {
-                    s.iName = 1;
-                    s.iNameStop = 1;
-                    s.iNameStep = 1;
-                }
-                s.amongusCount = new int[(s.iNameStop - s.iName) / s.iNameStep + 2];
+                s.amongusCount = new int[(s.iNameStop - s.iName) / s.iNameStep + 1];
                 s.picturesProcessed = new int[Environment.ProcessorCount / 4];
                 Console.WriteLine($"{DateTime.Now:HH:mm:ss} | Started!");
 
@@ -63,7 +65,7 @@ namespace amongUsFinder
                     threads[i].Start();
                 }
 
-                //Output progress updates to console
+                //Output progress updates to console every minute
                 int min = DateTime.Now.Minute;
                 int picturesProcessed = 0;
                 double progressState = 0;
@@ -86,10 +88,10 @@ namespace amongUsFinder
                     threads[i].Join();
                 }
 
-                for (int i = 0; i < 4; i++)
-                {
-                    s.picturesProcessed[i] = 0;
-                }
+                //for (int i = 0; i < 4; i++)
+                //{
+                //    s.picturesProcessed[i] = 0;
+                //}
 
                 //Rename processed files
                 if (s.iNameStep > 1)
@@ -107,15 +109,14 @@ namespace amongUsFinder
                 }
 
                 //Generate txt file
-                if (!s.loadLocation.Contains("."))
+                //string filePath;
+                //if (s.loadLocation.Contains(".")) 
+                using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
                 {
-                    using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
+                    for (int i = 0; i < (s.iNameStop - s.iName) / s.iNameStep + 1; i++)
                     {
-                        for (int i = 0; i < (s.iNameStop - s.iName) / s.iNameStep + 1; i++)
-                        {
-                            sr.WriteLine(s.amongusCount[i]);
-                        }
-                    } 
+                        sr.WriteLine(s.amongusCount[i]);
+                    }
                 }
 
                 //Output final informations to console
