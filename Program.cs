@@ -9,8 +9,8 @@ namespace amongUsFinder
         static void Main(string[] args)
         {
             SearchAmongus s = new SearchAmongus();
-            Thread[] threads = new Thread[Environment.ProcessorCount / 4];
-            int[] threadShift = new int[Environment.ProcessorCount / 4];
+            Thread[] threads = new Thread[s.tcNormal];
+            int[] threadShift = new int[s.tcNormal];
 
             for (int i = 0; i < threadShift.Length; i++)
             {
@@ -48,7 +48,7 @@ namespace amongUsFinder
                     else s.iNameStep = 1;
                 }
                 s.amongusCount = new int[(s.iNameStop - s.iName) / s.iNameStep + 1];
-                s.picturesProcessed = new int[Environment.ProcessorCount / 4];
+                s.picturesProcessed = new int[s.tcNormal];
                 Console.WriteLine($"{DateTime.Now:HH:mm:ss} | Started!");
 
                 DateTime startTime = DateTime.Now;
@@ -93,35 +93,34 @@ namespace amongUsFinder
                 //    s.picturesProcessed[i] = 0;
                 //}
 
-                //Rename processed files
-                if (s.iNameStep > 1)
+                //Generate txt file & rename processed files
+                if (!s.loadLocation.Contains("."))
                 {
-                    int iNew = 1;
-                    for (int i = s.iName; i <= s.iNameStop; i += s.iNameStep)
+                    if (s.iNameStep > 1)
                     {
-                        try
+                        int iNew = 1;
+                        for (int i = s.iName; i <= s.iNameStop; i += s.iNameStep)
                         {
-                            File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNew:00000}.png");
+                            try
+                            {
+                                File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNew:00000}.png");
+                            }
+                            catch { }
+                            iNew++;
                         }
-                        catch { }
-                        iNew++;
                     }
-                }
-
-                //Generate txt file
-                //string filePath;
-                //if (s.loadLocation.Contains(".")) 
-                using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
-                {
-                    for (int i = 0; i < (s.iNameStop - s.iName) / s.iNameStep + 1; i++)
+                    using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
                     {
-                        sr.WriteLine(s.amongusCount[i]);
-                    }
+                        for (int i = 0; i < (s.iNameStop - s.iName) / s.iNameStep + 1; i++)
+                        {
+                            sr.WriteLine(s.amongusCount[i]);
+                        }
+                    } 
                 }
 
                 //Output final informations to console
                 TimeSpan progressTime = DateTime.Now - startTime;
-                Console.Write($"{DateTime.Now:HH:mm:ss} | Task comlpeted in {progressTime.ToString(@"mm\:ss")} ");
+                Console.Write($"{DateTime.Now:HH:mm:ss} | Task comlpeted in {progressTime.ToString(@"mm\:ss\.ffff")} ");
                 if (!s.loadLocation.Contains("."))
                 {
                     Console.WriteLine($"with an average of {Math.Round(progressTime.TotalSeconds / picturesProcessed, 2, MidpointRounding.AwayFromZero)}s per picture!");

@@ -8,6 +8,7 @@ namespace amongUsFinder
 {
     internal class SearchAmongus
     {
+        public int tcNormal = Environment.ProcessorCount / 4;
         public string loadLocation;
         public string saveLocation;
         public int iName;
@@ -27,9 +28,12 @@ namespace amongUsFinder
             Bitmap place;
             picturesProcessed[shift] = 0;
 
+            //Stopwatch sw = new Stopwatch();
+
             //Loop through pictures
-            for (int i = iName + shift * iNameStep; i <= iNameStop; i += 4 * iNameStep)
+            for (int i = iName + shift * iNameStep; i <= iNameStop; i += tcNormal * iNameStep)
             {
+                //if (shift == 0) sw.Restart();
                 amongUsFound = 0;
                 //Start quad threads
                 if (loadLocation.Contains(".")) place = new Bitmap($"{loadLocation}");
@@ -52,6 +56,11 @@ namespace amongUsFinder
                 amongusCount[loopId] = amongUsFound;
                 loopId += 4;
                 picturesProcessed[shift]++;
+                //if (shift == 0)
+                //{
+                //    sw.Stop();
+                //    Console.WriteLine(sw.ElapsedMilliseconds + "ms --> per picture");
+                //}
             }
 
 
@@ -103,7 +112,6 @@ namespace amongUsFinder
                     //    s.Stop();
                     //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> darken background"); 
                     //}
-                    //-------------------------------------------------------------------------------------------------
 
                     //Loop through pixel/search amongus
                     //if (shift == 0 && xStart == 997 && yStart == 997) s.Restart();
