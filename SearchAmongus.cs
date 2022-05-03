@@ -22,30 +22,38 @@ namespace amongUsFinder
             int amongUsFound;
             int loopId = shift;
             Mutex mutex = new Mutex();
-            Thread[] threadsQ = new Thread[4];
+            Thread[] threadsQ = new Thread[3];
             Bitmap bmp = new Bitmap(2000, 2000);
             Graphics g = Graphics.FromImage(bmp);
             Bitmap place;
             picturesProcessed[shift] = 0;
 
+            //Stopwatch s = new Stopwatch();
             //Stopwatch sw = new Stopwatch();
+            //int iterations = 0;
+            //int iterationsW = 0;
+            //long overallTime = 0;
+            //long overallTimeW = 0;
 
+            
             //Loop through pictures
             for (int i = iName + shift * iNameStep; i <= iNameStop; i += tcNormal * iNameStep)
             {
                 //if (shift == 0) sw.Restart();
                 amongUsFound = 0;
                 //Start quad threads
-                if (loadLocation.Contains(".")) place = new Bitmap($"{loadLocation}");
+                if (loadLocation.Contains(".")) place = new Bitmap(loadLocation);
                 else place = new Bitmap($@"{loadLocation}\{i:00000}.png");
                 threadsQ[0] = new Thread(() => searchQuarter(0, 0, 1000, 1000));
                 threadsQ[1] = new Thread(() => searchQuarter(997, 0, 1003, 1000));
                 threadsQ[2] = new Thread(() => searchQuarter(0, 997, 1000, 1003));
-                threadsQ[3] = new Thread(() => searchQuarter(997, 997, 1003, 1003));
                 for (int t = 0; t < threadsQ.Length; t++)
                 {
+                    threadsQ[t].Priority = ThreadPriority.Highest;
                     threadsQ[t].Start();
                 }
+                //if (shift == 0) Console.WriteLine($"{sw.ElapsedMilliseconds}ms | Load image");
+                searchQuarter(997, 997, 1003, 1003);
                 for (int t = 0; t < threadsQ.Length; t++)
                 {
                     threadsQ[t].Join();
@@ -59,7 +67,9 @@ namespace amongUsFinder
                 //if (shift == 0)
                 //{
                 //    sw.Stop();
-                //    Console.WriteLine(sw.ElapsedMilliseconds + "ms --> per picture");
+                //    iterationsW++;
+                //    overallTimeW += sw.ElapsedMilliseconds;
+                //    Console.WriteLine($"Iteration: {iterationsW} | {sw.ElapsedMilliseconds}ms ({overallTimeW / iterationsW}ms average) --> per picture");
                 //}
             }
 
@@ -68,7 +78,6 @@ namespace amongUsFinder
             {
                 int[] c1 = new int[3];
                 int[] c2 = new int[3];
-                //Stopwatch s = new Stopwatch();
                 int[,] amongus = new int[5, 4] { { 0, 2, 2, 2},
                                                  { 2, 2, 1, 1},
                                                  { 2, 2, 2, 2},
@@ -82,7 +91,9 @@ namespace amongUsFinder
                 //if (shift == 0 && xStart == 997 && yStart == 997)
                 //{
                 //    s.Stop();
-                //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> clone bitmaps");
+                //    iterations++;
+                //    overallTime += s.ElapsedMilliseconds;
+                //    Console.WriteLine($"Iteration: {iterations} | {s.ElapsedMilliseconds}ms ({overallTime / iterations}ms average) --> clone bitmap");
                 //}
 
                 unsafe
@@ -107,10 +118,12 @@ namespace amongUsFinder
                             currentLine[x] = (byte)(currentLine[x] * 0.25);
                         }
                     }
-                    //if (shift == 0 && xStart == 997 && yStart == 997)
+                    //if (shift == 0  && xStart == 997 && yStart == 997)
                     //{
                     //    s.Stop();
-                    //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> darken background"); 
+                    //    iterations++;
+                    //    overallTime += s.ElapsedMilliseconds;
+                    //    Console.WriteLine($"Iteration: {iterations} | {s.ElapsedMilliseconds}ms ({overallTime / iterations}ms average) --> darken background");
                     //}
 
                     //Loop through pixel/search amongus
@@ -219,17 +232,21 @@ namespace amongUsFinder
                     //if (shift == 0 && xStart == 997 && yStart == 997)
                     //{
                     //    s.Stop();
-                    //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> search amongus");
+                    //    iterations++;
+                    //    overallTime += s.ElapsedMilliseconds;
+                    //    Console.WriteLine($"Iteration: {iterations} | {s.ElapsedMilliseconds}ms ({overallTime / iterations}ms average) --> search amongus");
                     //}
                     bmpTemp.UnlockBits(bmpTempData);
                     bmpTempF.UnlockBits(bmpTempDataF);
                     mutex.WaitOne();
                     //if (shift == 0 && xStart == 997 && yStart == 997) s.Restart();
                     g.DrawImage(bmpTempF, xStart, yStart, xStop, yStop);
-                    //if (shift == 0 && xStart == 997 && yStart == 997)
+                    //if (shift == 0  && xStart == 997 && yStart == 997)
                     //{
                     //    s.Stop();
-                    //    Console.WriteLine(s.ElapsedMilliseconds + "ms --> draw quarter");
+                    //    iterations++;
+                    //    overallTime += s.ElapsedMilliseconds;
+                    //    Console.WriteLine($"Iteration: {iterations} | {s.ElapsedMilliseconds}ms ({overallTime / iterations}ms average) --> draw quarter to final image");
                     //}
                     mutex.ReleaseMutex();
 
@@ -252,6 +269,9 @@ namespace amongUsFinder
                     return match;
                 }
             }
+            g.Dispose();
+            bmp.Dispose();
+            mutex.Dispose();
         }
 
         int tXco(int xC, double shift, bool mirror)

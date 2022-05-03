@@ -58,12 +58,14 @@ namespace amongUsFinder
                 foreach (int value in threadShift)
                 {
                     threads[ct] = new Thread(() => s.searchAmongus(value));
+                    threads[ct].Priority = ThreadPriority.Highest;
                     ct++;
                 }
                 for (int i = 0; i < threads.Length; i++)
                 {
                     threads[i].Start();
                 }
+                Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
                 //Output progress updates to console every minute
                 int min = DateTime.Now.Minute;
@@ -88,14 +90,11 @@ namespace amongUsFinder
                     threads[i].Join();
                 }
 
-                //for (int i = 0; i < 4; i++)
-                //{
-                //    s.picturesProcessed[i] = 0;
-                //}
+                Thread.CurrentThread.Priority = ThreadPriority.Normal;
 
-                //Generate txt file & rename processed files
                 if (!s.loadLocation.Contains("."))
                 {
+                    //Rename processed files
                     if (s.iNameStep > 1)
                     {
                         int iNew = 1;
@@ -109,6 +108,7 @@ namespace amongUsFinder
                             iNew++;
                         }
                     }
+                    //Generate txt file
                     using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
                     {
                         for (int i = 0; i < (s.iNameStop - s.iName) / s.iNameStep + 1; i++)
@@ -123,10 +123,18 @@ namespace amongUsFinder
                 Console.Write($"{DateTime.Now:HH:mm:ss} | Task comlpeted in {progressTime.ToString(@"mm\:ss\.ffff")} ");
                 if (!s.loadLocation.Contains("."))
                 {
-                    Console.WriteLine($"with an average of {Math.Round(progressTime.TotalSeconds / picturesProcessed, 2, MidpointRounding.AwayFromZero)}s per picture!");
+                    Console.WriteLine($"with an average of {RoundUpValue(progressTime.TotalSeconds / picturesProcessed, 4)}s per picture!");
                 }
                 else Console.WriteLine($"and {s.amongusCount[0]} amongi were found!");
                 Console.WriteLine("-------------------------------------------------------------------------------------------\n");
+            }
+
+            //https://stackoverflow.com/questions/21599118/always-round-up-a-value-in-c-sharp
+            double RoundUpValue(double value, int decimalpoint)
+            {
+                var result = Math.Round(value, decimalpoint);
+                if (result < value) result += Math.Pow(10, -decimalpoint);
+                return result;
             }
         }
     }
