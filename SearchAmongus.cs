@@ -23,11 +23,10 @@ namespace amongUsFinder
             int loopId = shift;
             Mutex mutex = new Mutex();
             Thread[] threadsQ = new Thread[3];
-            Bitmap bmp = new Bitmap(2000, 2000);
-            Graphics g = Graphics.FromImage(bmp);
+            Bitmap bmp;
+            Graphics g;
             Bitmap place;
             picturesProcessed[shift] = 0;
-
             //Stopwatch s = new Stopwatch();
             //Stopwatch sw = new Stopwatch();
             //int iterations = 0;
@@ -35,25 +34,49 @@ namespace amongUsFinder
             //long overallTime = 0;
             //long overallTimeW = 0;
 
+            if (loadLocation.Contains(".")) place = new Bitmap(loadLocation);
+            else place = new Bitmap($@"{loadLocation}\{iName + shift * iNameStep:00000}.png");
+            bmp = new Bitmap(place.Width, place.Height);
+            g = Graphics.FromImage(bmp);
+            double threadW = 0.5 * bmp.Width;
+            double threadH = 0.5 * bmp.Height;
+            int [,] splitParameters = new int[4, 4] { {0, 0, roundSplitLoc(threadW, true), roundSplitLoc(threadH, true)},
+                                                      {roundSplitLoc(threadW, true) - 3, 0, roundSplitLoc(threadW, false) + 3, roundSplitLoc(threadH, false)},
+                                                      {0, roundSplitLoc(threadH, true) - 3, roundSplitLoc(threadW, false), roundSplitLoc(threadH, false) + 3},
+                                                      {roundSplitLoc(threadW, true) - 3, roundSplitLoc(threadH, true) - 3, roundSplitLoc(threadW, false) + 3, roundSplitLoc(threadH, false) + 3} };
+
             
+
             //Loop through pictures
             for (int i = iName + shift * iNameStep; i <= iNameStop; i += tcNormal * iNameStep)
             {
                 //if (shift == 0) sw.Restart();
                 amongUsFound = 0;
                 //Start quad threads
-                if (loadLocation.Contains(".")) place = new Bitmap(loadLocation);
-                else place = new Bitmap($@"{loadLocation}\{i:00000}.png");
-                threadsQ[0] = new Thread(() => searchQuarter(0, 0, 1000, 1000));
-                threadsQ[1] = new Thread(() => searchQuarter(997, 0, 1003, 1000));
-                threadsQ[2] = new Thread(() => searchQuarter(0, 997, 1000, 1003));
+                if (!loadLocation.Contains(".")) place = new Bitmap($@"{loadLocation}\{i:00000}.png");
+
+                //threadsQ[0] = new Thread(() => searchQuarter(0, 0, 1000, 1000));
+                //threadsQ[1] = new Thread(() => searchQuarter(997, 0, 1003, 1000));
+                //threadsQ[2] = new Thread(() => searchQuarter(0, 997, 1000, 1003));
+                //for (int t = 0; t < threadsQ.Length; t++)
+                //{
+                //    threadsQ[t].Priority = ThreadPriority.Highest;
+                //    threadsQ[t].Start();
+                //}
+                ////if (shift == 0) Console.WriteLine($"{sw.ElapsedMilliseconds}ms | Load image");
+                //searchQuarter(997, 997, 1003, 1003);
+
+                threadsQ[0] = new Thread(() => searchQuarter(splitParameters[0, 0], splitParameters[0, 1], splitParameters[0, 2], splitParameters[0, 3]));
+                threadsQ[1] = new Thread(() => searchQuarter(splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
+                threadsQ[2] = new Thread(() => searchQuarter(splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
                 for (int t = 0; t < threadsQ.Length; t++)
                 {
                     threadsQ[t].Priority = ThreadPriority.Highest;
                     threadsQ[t].Start();
                 }
                 //if (shift == 0) Console.WriteLine($"{sw.ElapsedMilliseconds}ms | Load image");
-                searchQuarter(997, 997, 1003, 1003);
+                searchQuarter(splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
+
                 for (int t = 0; t < threadsQ.Length; t++)
                 {
                     threadsQ[t].Join();
@@ -240,6 +263,7 @@ namespace amongUsFinder
                     bmpTempF.UnlockBits(bmpTempDataF);
                     mutex.WaitOne();
                     //if (shift == 0 && xStart == 997 && yStart == 997) s.Restart();
+                    g = Graphics.FromImage(bmp);
                     g.DrawImage(bmpTempF, xStart, yStart, xStop, yStop);
                     //if (shift == 0  && xStart == 997 && yStart == 997)
                     //{
@@ -272,13 +296,20 @@ namespace amongUsFinder
             g.Dispose();
             bmp.Dispose();
             mutex.Dispose();
-        }
 
-        int tXco(int xC, double shift, bool mirror)
-        {
-            int f = 1;
-            if (mirror) f = -1;
-            return (int)(xC + 1.5 + shift * f);
+            int tXco(int xC, double move, bool mirror)
+            {
+                int f = 1;
+                if (mirror) f = -1;
+                return (int)(xC + 1.5 + move * f);
+            }
+
+            int roundSplitLoc(double value, bool roundUp)
+            {
+                int result = (int)value;
+                if (result < value && !roundUp) result++;
+                return result;
+            }
         }
     }
 }
