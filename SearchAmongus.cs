@@ -2,13 +2,12 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Threading;
-using System.Diagnostics;
 
 namespace amongUsFinder
 {
     internal class SearchAmongus
     {
-        public int tcNormal = Environment.ProcessorCount / 4;
+        public int tcNormal = 1;
         public string loadLocation;
         public string saveLocation;
         public int iName;
@@ -40,12 +39,10 @@ namespace amongUsFinder
             g = Graphics.FromImage(bmp);
             double threadW = 0.5 * bmp.Width;
             double threadH = 0.5 * bmp.Height;
-            int [,] splitParameters = new int[4, 4] { {0, 0, roundSplitLoc(threadW, true), roundSplitLoc(threadH, true)},
+            int[,] splitParameters = new int[4, 4] { {0, 0, roundSplitLoc(threadW, true), roundSplitLoc(threadH, true)},
                                                       {roundSplitLoc(threadW, true) - 3, 0, roundSplitLoc(threadW, false) + 3, roundSplitLoc(threadH, false)},
                                                       {0, roundSplitLoc(threadH, true) - 3, roundSplitLoc(threadW, false), roundSplitLoc(threadH, false) + 3},
                                                       {roundSplitLoc(threadW, true) - 3, roundSplitLoc(threadH, true) - 3, roundSplitLoc(threadW, false) + 3, roundSplitLoc(threadH, false) + 3} };
-
-            
 
             //Loop through pictures
             for (int i = iName + shift * iNameStep; i <= iNameStop; i += tcNormal * iNameStep)
@@ -53,8 +50,6 @@ namespace amongUsFinder
                 //if (shift == 0) sw.Restart();
                 amongUsFound = 0;
                 //Start quad threads
-                if (!loadLocation.Contains(".")) place = new Bitmap($@"{loadLocation}\{i:00000}.png");
-
                 //threadsQ[0] = new Thread(() => searchQuarter(0, 0, 1000, 1000));
                 //threadsQ[1] = new Thread(() => searchQuarter(997, 0, 1003, 1000));
                 //threadsQ[2] = new Thread(() => searchQuarter(0, 997, 1000, 1003));
@@ -65,7 +60,6 @@ namespace amongUsFinder
                 //}
                 ////if (shift == 0) Console.WriteLine($"{sw.ElapsedMilliseconds}ms | Load image");
                 //searchQuarter(997, 997, 1003, 1003);
-
                 threadsQ[0] = new Thread(() => searchQuarter(splitParameters[0, 0], splitParameters[0, 1], splitParameters[0, 2], splitParameters[0, 3]));
                 threadsQ[1] = new Thread(() => searchQuarter(splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
                 threadsQ[2] = new Thread(() => searchQuarter(splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
@@ -83,10 +77,14 @@ namespace amongUsFinder
                 }
                 if (loadLocation.Contains(".")) bmp.Save($"{loadLocation.Split('.')[0]}_searched.{loadLocation.Split('.')[1]}", ImageFormat.Png);
                 else bmp.Save($@"{saveLocation}\{i:00000}.png", ImageFormat.Png);
-                place.Dispose();
                 amongusCount[loopId] = amongUsFound;
-                loopId += 4;
+                loopId += tcNormal;
                 picturesProcessed[shift]++;
+                if (!loadLocation.Contains(".") && i < iNameStop - tcNormal * iNameStep)
+                {
+                    place.Dispose();
+                    place = new Bitmap($@"{loadLocation}\{i + tcNormal * iNameStep:00000}.png");
+                }
                 //if (shift == 0)
                 //{
                 //    sw.Stop();
@@ -294,6 +292,7 @@ namespace amongUsFinder
                 }
             }
             g.Dispose();
+            place.Dispose();
             bmp.Dispose();
             mutex.Dispose();
 

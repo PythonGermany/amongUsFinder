@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Threading;
 using System.IO;
+using System.Threading;
 
 namespace amongUsFinder
 {
@@ -11,6 +11,7 @@ namespace amongUsFinder
             SearchAmongus s = new SearchAmongus();
             Thread[] threads = new Thread[s.tcNormal];
             int[] threadShift = new int[s.tcNormal];
+            TimeSpan processTime;
 
             for (int i = 0; i < threadShift.Length; i++)
             {
@@ -49,8 +50,8 @@ namespace amongUsFinder
                 }
                 s.amongusCount = new int[(s.iNameStop - s.iName) / s.iNameStep + 1];
                 s.picturesProcessed = new int[s.tcNormal];
-                Console.WriteLine($"{DateTime.Now:HH:mm:ss} | Started!");
 
+                Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Started!");
                 DateTime startTime = DateTime.Now;
 
                 //Start main threads
@@ -76,12 +77,16 @@ namespace amongUsFinder
                     progressState = picturesProcessed / ((double)(s.iNameStop - s.iName + 1) / s.iNameStep) * 100;
                     if (min != DateTime.Now.Minute)
                     {
-                        Console.WriteLine($"{DateTime.Now:HH:mm:ss} | {picturesProcessed} pictures processed --> {Math.Round(progressState, 2)}% done");
+                        Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | {picturesProcessed} pictures processed --> {Math.Round(progressState, 2)}% done");
                         min = DateTime.Now.Minute;
                     }
                     if (progressState >= 100) break;
                     Thread.Sleep(995);
-                    picturesProcessed = s.picturesProcessed[0] + s.picturesProcessed[1] + s.picturesProcessed[2] + s.picturesProcessed[3];
+                    picturesProcessed = 0;
+                    foreach (var item in s.picturesProcessed)
+                    {
+                        picturesProcessed += item;
+                    }
                 }
 
                 //Wait for each thread to finish
@@ -94,19 +99,23 @@ namespace amongUsFinder
 
                 if (!s.loadLocation.Contains("."))
                 {
+                    processTime = DateTime.Now - startTime;
+                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Processing pictures completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {RoundUpValue(processTime.TotalSeconds / picturesProcessed, 3)}s per picture!");
+
                     //Rename processed files
                     if (s.iNameStep > 1)
                     {
-                        int iNew = 1;
+                        int iNewName = 1;
                         for (int i = s.iName; i <= s.iNameStop; i += s.iNameStep)
                         {
                             try
                             {
-                                File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNew:00000}.png");
+                                File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNewName:00000}.png");
                             }
                             catch { }
-                            iNew++;
+                            iNewName++;
                         }
+                        Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Files renamed (from 00001 to {iNewName:00000})");
                     }
                     //Generate txt file
                     using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
@@ -115,18 +124,18 @@ namespace amongUsFinder
                         {
                             sr.WriteLine(s.amongusCount[i]);
                         }
-                    } 
+                    }
+                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Txt file generated at {s.saveLocation + @"\amongUsCount.txt"}");
                 }
 
                 //Output final informations to console
-                TimeSpan progressTime = DateTime.Now - startTime;
-                Console.Write($"{DateTime.Now:HH:mm:ss} | Task comlpeted in {progressTime.ToString(@"mm\:ss\.ffff")} ");
-                if (!s.loadLocation.Contains("."))
+                processTime = DateTime.Now - startTime;
+                Console.Write($"{DateTime.Now:HH:mm:ss.fff} | Task comlpeted in {processTime.ToString(@"mm\:ss\.fff")}");
+                if (s.loadLocation.Contains("."))
                 {
-                    Console.WriteLine($"with an average of {RoundUpValue(progressTime.TotalSeconds / picturesProcessed, 4)}s per picture!");
+                    Console.Write($" and {s.amongusCount[0]} amongi were found!");
                 }
-                else Console.WriteLine($"and {s.amongusCount[0]} amongi were found!");
-                Console.WriteLine("-------------------------------------------------------------------------------------------\n");
+                Console.WriteLine("\n-------------------------------------------------------------------------------------------\n");
             }
 
             //https://stackoverflow.com/questions/21599118/always-round-up-a-value-in-c-sharp
