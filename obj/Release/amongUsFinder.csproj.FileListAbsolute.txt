@@ -1,8 +1,0 @@
-C:\Users\PythonGermany\source\repos\amongUsFinder\amongUsFinder\bin\Release\amongUsFinder.exe.config
-C:\Users\PythonGermany\source\repos\amongUsFinder\amongUsFinder\bin\Release\amongUsFinder.exe
-C:\Users\PythonGermany\source\repos\amongUsFinder\amongUsFinder\bin\Release\amongUsFinder.pdb
-C:\Users\PythonGermany\source\repos\amongUsFinder\amongUsFinder\obj\Release\amongUsFinder.csproj.AssemblyReference.cache
-C:\Users\PythonGermany\source\repos\amongUsFinder\amongUsFinder\obj\Release\amongUsFinder.csproj.SuggestedBindingRedirects.cache
-C:\Users\PythonGermany\source\repos\amongUsFinder\amongUsFinder\obj\Release\amongUsFinder.csproj.CoreCompileInputs.cache
-C:\Users\PythonGermany\source\repos\amongUsFinder\amongUsFinder\obj\Release\amongUsFinder.exe
-C:\Users\PythonGermany\source\repos\amongUsFinder\amongUsFinder\obj\Release\amongUsFinder.pdb
