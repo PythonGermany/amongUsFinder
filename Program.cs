@@ -48,7 +48,7 @@ namespace amongUsFinder
                     if (step != "") s.iNameStep = Convert.ToInt32(step);
                     else s.iNameStep = 1;
                 }
-                s.amongusCount = new int[(s.iNameStop - s.iName) / s.iNameStep + 1];
+                s.amongusCount = new int[s.roundUp((s.iNameStop - s.iName + 1) / s.iNameStep, true) + 1];
                 s.picturesProcessed = new int[s.tcNormal];
 
                 Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Started!");
@@ -105,15 +105,15 @@ namespace amongUsFinder
                     //Rename processed files
                     if (s.iNameStep > 1)
                     {
-                        int iNewName = 1;
+                        int iNewName = 0;
                         for (int i = s.iName; i <= s.iNameStop; i += s.iNameStep)
                         {
+                            iNewName++;
                             try
                             {
                                 File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNewName:00000}.png");
                             }
                             catch { }
-                            iNewName++;
                         }
                         Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Files renamed (from 00001 to {iNewName:00000})");
                     }
