@@ -7,7 +7,7 @@ namespace amongUsFinder
 {
     internal class SearchAmongus
     {
-        public int tcNormal = 1;
+        public int tcNormal = 4;
         public string loadLocation;
         public string saveLocation;
         public int iName;
@@ -39,10 +39,10 @@ namespace amongUsFinder
             g = Graphics.FromImage(bmp);
             double threadW = 0.5 * bmp.Width;
             double threadH = 0.5 * bmp.Height;
-            int[,] splitParameters = new int[4, 4] { {0, 0, roundSplitLoc(threadW, true), roundSplitLoc(threadH, true)},
-                                                      {roundSplitLoc(threadW, true) - 3, 0, roundSplitLoc(threadW, false) + 3, roundSplitLoc(threadH, false)},
-                                                      {0, roundSplitLoc(threadH, true) - 3, roundSplitLoc(threadW, false), roundSplitLoc(threadH, false) + 3},
-                                                      {roundSplitLoc(threadW, true) - 3, roundSplitLoc(threadH, true) - 3, roundSplitLoc(threadW, false) + 3, roundSplitLoc(threadH, false) + 3} };
+            int[,] splitParameters = new int[4, 4] { {0, 0, roundUpDown(threadW, true), roundUpDown(threadH, true)},
+                                                      {roundUpDown(threadW, true) - 3, 0, (int)threadW + 3, (int)threadH},
+                                                      {0, roundUpDown(threadH, true) - 3, (int)threadW, (int)threadH + 3},
+                                                      {roundUpDown(threadW, true) - 3, roundUpDown(threadH, true) - 3, (int)threadW + 3, (int)threadH + 3} };
 
             //Loop through pictures
             for (int i = iName + shift * iNameStep; i <= iNameStop; i += tcNormal * iNameStep)
@@ -93,7 +93,10 @@ namespace amongUsFinder
                 //    Console.WriteLine($"Iteration: {iterationsW} | {sw.ElapsedMilliseconds}ms ({overallTimeW / iterationsW}ms average) --> per picture");
                 //}
             }
-
+            g.Dispose();
+            place.Dispose();
+            bmp.Dispose();
+            mutex.Dispose();
 
             void searchQuarter(int xStart, int yStart, int xStop, int yStop)
             {
@@ -291,24 +294,20 @@ namespace amongUsFinder
                     return match;
                 }
             }
-            g.Dispose();
-            place.Dispose();
-            bmp.Dispose();
-            mutex.Dispose();
-
+            
             int tXco(int xC, double move, bool mirror)
             {
                 int f = 1;
                 if (mirror) f = -1;
                 return (int)(xC + 1.5 + move * f);
             }
+        }
 
-            int roundSplitLoc(double value, bool roundUp)
-            {
-                int result = (int)value;
-                if (result < value && !roundUp) result++;
-                return result;
-            }
+        public int roundUpDown(double value, bool roundUp)
+        {
+            int result = (int)value;
+            if (result < value && !roundUp) result++;
+            return result;
         }
     }
 }

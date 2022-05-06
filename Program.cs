@@ -48,7 +48,7 @@ namespace amongUsFinder
                     if (step != "") s.iNameStep = Convert.ToInt32(step);
                     else s.iNameStep = 1;
                 }
-                s.amongusCount = new int[(s.iNameStop - s.iName) / s.iNameStep + 1];
+                s.amongusCount = new int[s.roundUpDown((s.iNameStop - s.iName + 1) / s.iNameStep, true) + 1];
                 s.picturesProcessed = new int[s.tcNormal];
 
                 Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Started!");
@@ -100,20 +100,20 @@ namespace amongUsFinder
                 if (!s.loadLocation.Contains("."))
                 {
                     processTime = DateTime.Now - startTime;
-                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Processing pictures completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {RoundUpValue(processTime.TotalSeconds / picturesProcessed, 3)}s per picture!");
+                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Processing pictures completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {roundUpValue(processTime.TotalSeconds / picturesProcessed, 3)}s per picture!");
 
                     //Rename processed files
                     if (s.iNameStep > 1)
                     {
-                        int iNewName = 1;
+                        int iNewName = 0;
                         for (int i = s.iName; i <= s.iNameStop; i += s.iNameStep)
                         {
+                            iNewName++;
                             try
                             {
                                 File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNewName:00000}.png");
                             }
                             catch { }
-                            iNewName++;
                         }
                         Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Files renamed (from 00001 to {iNewName:00000})");
                     }
@@ -139,7 +139,7 @@ namespace amongUsFinder
             }
 
             //https://stackoverflow.com/questions/21599118/always-round-up-a-value-in-c-sharp
-            double RoundUpValue(double value, int decimalpoint)
+            double roundUpValue(double value, int decimalpoint)
             {
                 var result = Math.Round(value, decimalpoint);
                 if (result < value) result += Math.Pow(10, -decimalpoint);
