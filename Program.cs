@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Diagnostics;
 
 namespace amongUsFinder
 {
@@ -12,7 +13,7 @@ namespace amongUsFinder
             Thread[] threads = new Thread[s.tcNormal];
             int[] threadShift = new int[s.tcNormal];
             TimeSpan processTime;
-
+            Stopwatch sw = new Stopwatch();
             for (int i = 0; i < threadShift.Length; i++)
             {
                 threadShift[i] = i;
