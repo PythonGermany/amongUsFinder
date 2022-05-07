@@ -12,8 +12,11 @@ namespace amongUsFinder
             SearchAmongus s = new SearchAmongus();
             Thread[] threads = new Thread[s.tcNormal];
             int[] threadShift = new int[s.tcNormal];
+            StreamWriter swLog;
             TimeSpan processTime;
+
             Stopwatch sw = new Stopwatch();
+
             for (int i = 0; i < threadShift.Length; i++)
             {
                 threadShift[i] = i;
@@ -31,6 +34,8 @@ namespace amongUsFinder
                     s.iNameStep = 1;
                     int folderIndex = s.loadLocation.LastIndexOf(@"\");
                     s.saveLocation = s.loadLocation.Substring(0, folderIndex);
+                    string fileName = s.loadLocation.Substring(folderIndex + 1);
+                    swLog = new StreamWriter(s.saveLocation + $@"\log_{fileName.Split('.')[0]}.txt");
                 }
                 else
                 {
@@ -48,11 +53,12 @@ namespace amongUsFinder
                     string step = Console.ReadLine();
                     if (step != "") s.iNameStep = Convert.ToInt32(step);
                     else s.iNameStep = 1;
+                    swLog = new StreamWriter(s.saveLocation + @"\log.txt");
                 }
-                s.amongusCount = new int[s.roundUpDown((s.iNameStop - s.iName + 1) / s.iNameStep, true) + 1];
+                s.amongusCount = new int[s.roundUpDown((s.iNameStop - s.iName + 1) / s.iNameStep)];
                 s.picturesProcessed = new int[s.tcNormal];
 
-                Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Started!");
+                outputText($"{DateTime.Now:HH:mm:ss.fff} | Started!");
                 DateTime startTime = DateTime.Now;
 
                 //Start main threads
@@ -78,7 +84,7 @@ namespace amongUsFinder
                     progressState = picturesProcessed / ((double)(s.iNameStop - s.iName + 1) / s.iNameStep) * 100;
                     if (min != DateTime.Now.Minute)
                     {
-                        Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | {picturesProcessed} pictures processed --> {Math.Round(progressState, 2)}% done");
+                        outputText($"{DateTime.Now:HH:mm:ss.fff} | ({picturesProcessed}|{s.amongusCount.Length}) Progress: {Math.Round(progressState, 2)}% done");
                         min = DateTime.Now.Minute;
                     }
                     if (progressState >= 100) break;
@@ -101,7 +107,7 @@ namespace amongUsFinder
                 if (!s.loadLocation.Contains("."))
                 {
                     processTime = DateTime.Now - startTime;
-                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Processing pictures completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {roundUpValue(processTime.TotalSeconds / picturesProcessed, 3)}s per picture!");
+                    outputText($"{DateTime.Now:HH:mm:ss.fff} | Processing pictures completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {roundUpValue(processTime.TotalSeconds / picturesProcessed, 3)}s per picture!");
 
                     //Rename processed files
                     if (s.iNameStep > 1)
@@ -110,33 +116,30 @@ namespace amongUsFinder
                         for (int i = s.iName; i <= s.iNameStop; i += s.iNameStep)
                         {
                             iNewName++;
-                            try
-                            {
-                                File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNewName:00000}.png");
-                            }
-                            catch { }
+                            File.Move($@"{s.saveLocation}\{i:00000}.png", $@"{s.saveLocation}\{iNewName:00000}.png");
                         }
-                        Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Files renamed (from 00001 to {iNewName:00000})");
+                        outputText($"{DateTime.Now:HH:mm:ss.fff} | Files renamed (from 00001 to {iNewName:00000})");
                     }
                     //Generate txt file
-                    using (StreamWriter sr = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
+                    using (StreamWriter swNum = new StreamWriter(s.saveLocation + @"\amongUsCount.txt"))
                     {
-                        for (int i = 0; i < (s.iNameStop - s.iName) / s.iNameStep + 1; i++)
+                        for (int i = 0; i < s.amongusCount.Length; i++)
                         {
-                            sr.WriteLine(s.amongusCount[i]);
+                            swNum.WriteLine(s.amongusCount[i]);
                         }
                     }
-                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Txt file generated at {s.saveLocation + @"\amongUsCount.txt"}");
+                    outputText($"{DateTime.Now:HH:mm:ss.fff} | Txt file generated at {s.saveLocation + @"\amongUsCount.txt"}");
                 }
 
                 //Output final informations to console
                 processTime = DateTime.Now - startTime;
-                Console.Write($"{DateTime.Now:HH:mm:ss.fff} | Task comlpeted in {processTime.ToString(@"mm\:ss\.fff")}");
+                outputText($"{DateTime.Now:HH:mm:ss.fff} | Task comlpeted in {processTime.ToString(@"mm\:ss\.fff")}");
                 if (s.loadLocation.Contains("."))
                 {
-                    Console.Write($" and {s.amongusCount[0]} amongi were found!");
+                    outputText($"{DateTime.Now:HH:mm:ss.fff} | {s.amongusCount[0]} amongi were found! ({s.loadLocation.Split('.')[0]}_searched.{s.loadLocation.Split('.')[1]})");
                 }
                 Console.WriteLine("\n-------------------------------------------------------------------------------------------\n");
+                swLog.Close();
             }
 
             //https://stackoverflow.com/questions/21599118/always-round-up-a-value-in-c-sharp
@@ -145,6 +148,12 @@ namespace amongUsFinder
                 var result = Math.Round(value, decimalpoint);
                 if (result < value) result += Math.Pow(10, -decimalpoint);
                 return result;
+            }
+
+            void outputText(string output)
+            {
+                Console.WriteLine(output);
+                swLog.WriteLine($"{DateTime.Now:dd.MM.yyyy}; " + output);
             }
         }
     }

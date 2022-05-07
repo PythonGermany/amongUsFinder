@@ -22,14 +22,12 @@ namespace amongUsFinder
                                          { 3, 2, 3, 2},
                                          { 0, 3, 0, 3}};
 
-        public void searchAmongus(int shift = 0)
+        unsafe public void searchAmongus(int shift = 0)
         {
             int amongUsFound;
             int loopId = shift;
-            Mutex mutex = new Mutex();
             Thread[] threadsQ = new Thread[3];
             Bitmap bmp;
-            Graphics g;
             Bitmap place;
             picturesProcessed[shift] = 0;
 
@@ -39,170 +37,156 @@ namespace amongUsFinder
 
             if (loadLocation.Contains(".")) place = new Bitmap(loadLocation);
             else place = new Bitmap($@"{loadLocation}\{iName + shift * iNameStep:00000}.png");
-            bmp = new Bitmap(place.Width, place.Height);
-            g = Graphics.FromImage(bmp);
-            double threadW = 0.5 * bmp.Width;
-            double threadH = 0.5 * bmp.Height;
-            int[,] splitParameters = new int[4, 4] { {0, 0, roundUpDown(threadW, true), roundUpDown(threadH, true)},
-                                                      {roundUpDown(threadW, true) - 3, 0, (int)threadW + 3, (int)threadH},
-                                                      {0, roundUpDown(threadH, true) - 3, (int)threadW, (int)threadH + 3},
-                                                      {roundUpDown(threadW, true) - 3, roundUpDown(threadH, true) - 3, (int)threadW + 3, (int)threadH + 3} };
+            int bytesPerPixel = Image.GetPixelFormatSize(place.PixelFormat) / 8;
+            bmp = (Bitmap)place.Clone();
+            BitmapData placeData = place.LockBits(new Rectangle(0, 0, place.Width, place.Height), ImageLockMode.ReadWrite, place.PixelFormat);
+            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
+            byte* ptrFirstPixel = (byte*)placeData.Scan0;
+            byte* ptrFirstPixelB = (byte*)bmpData.Scan0;
 
+            double threadW = 0.5 * place.Width;
+            double threadH = 0.5 * place.Height;
+            int[,] splitParameters = new int[4, 4] { {0, 0, roundUpDown(threadW), roundUpDown(threadH)},
+                                                     {roundUpDown(threadW) - 3, 0, (int)threadW + 3, (int)threadH},
+                                                     {0, roundUpDown(threadH) - 3, (int)threadW, (int)threadH + 3},
+                                                     {roundUpDown(threadW) - 3, roundUpDown(threadH) - 3, (int)threadW + 3, (int)threadH + 3} };
+            
             //Loop through pictures
             for (int i = iName + shift * iNameStep; i <= iNameStop; i += tcNormal * iNameStep)
             {
                 amongUsFound = 0;
                 //Start quad threads
-                threadsQ[0] = new Thread(() => searchQuarter(splitParameters[0, 0], splitParameters[0, 1], splitParameters[0, 2], splitParameters[0, 3]));
-                threadsQ[1] = new Thread(() => searchQuarter(splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
-                threadsQ[2] = new Thread(() => searchQuarter(splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
+                threadsQ[0] = new Thread(() => searchQuarter(0, 0, splitParameters[0, 0], splitParameters[0, 1], splitParameters[0, 2], splitParameters[0, 3]));
+                threadsQ[1] = new Thread(() => searchQuarter(3, 0, splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
+                threadsQ[2] = new Thread(() => searchQuarter(0, 3, splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
                 for (int t = 0; t < threadsQ.Length; t++)
                 {
                     threadsQ[t].Priority = ThreadPriority.Highest;
                     threadsQ[t].Start();
                 }
-                searchQuarter(splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
+                searchQuarter(3, 3, splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
 
+                //Wait for threads to finish
                 for (int t = 0; t < threadsQ.Length; t++)
                 {
                     threadsQ[t].Join();
                 }
+                place.UnlockBits(placeData);
+                bmp.UnlockBits(bmpData);
                 if (loadLocation.Contains(".")) bmp.Save($"{loadLocation.Split('.')[0]}_searched.{loadLocation.Split('.')[1]}", ImageFormat.Png);
                 else bmp.Save($@"{saveLocation}\{i:00000}.png", ImageFormat.Png);
                 amongusCount[loopId] = amongUsFound;
                 loopId += tcNormal;
                 picturesProcessed[shift]++;
-                if (!loadLocation.Contains(".") && i < iNameStop - tcNormal * iNameStep)
+                if (!loadLocation.Contains(".") && i <= iNameStop - tcNormal * iNameStep)
                 {
                     place.Dispose();
+                    bmp.Dispose();
                     place = new Bitmap($@"{loadLocation}\{i + tcNormal * iNameStep:00000}.png");
+                    bmp = (Bitmap)place.Clone();
+                    placeData = place.LockBits(new Rectangle(0, 0, place.Width, place.Height), ImageLockMode.ReadWrite, place.PixelFormat);
+                    bmpData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, bmp.PixelFormat);
+                    ptrFirstPixel = (byte*)placeData.Scan0;
+                    ptrFirstPixelB = (byte*)bmpData.Scan0;
                 }
-                //if (shift == 0)
-                //{
-                //    s.Stop();
-                //    iterations++;
-                //    overallTime += s.ElapsedMilliseconds;
-                //    Console.WriteLine($"Iteration: {iterations} | {s.ElapsedMilliseconds}ms ({overallTime / iterations}ms average) --> per picture");
-                //}
             }
-            g.Dispose();
             place.Dispose();
             bmp.Dispose();
-            mutex.Dispose();
 
-            void searchQuarter(int xStart, int yStart, int xStop, int yStop)
+            unsafe void searchQuarter(int mx, int my, int xStart, int yStart, int xStop, int yStop)
             {
-                int[] c1 = new int[3];
-                int[] c2 = new int[3];
+                byte* c1 = stackalloc byte[3];
+                byte* c2 = stackalloc byte[3];
 
-                mutex.WaitOne();
-                Bitmap bmpTemp = place.Clone(new Rectangle(xStart, yStart, xStop, yStop), place.PixelFormat);
-                mutex.ReleaseMutex();
-                Bitmap bmpTempF = (Bitmap)bmpTemp.Clone();
-
-                unsafe
+                //Darken backgound/output bitmap data
+                for (int y = yStart + my; y < yStart + yStop; y++)
                 {
-                    //Parts from this Source: http://csharpexamples.com/fast-image-processing-c/
-                    BitmapData bmpTempData = bmpTemp.LockBits(new Rectangle(0, 0, bmpTemp.Width, bmpTemp.Height), ImageLockMode.ReadWrite, bmpTemp.PixelFormat);
-                    BitmapData bmpTempDataF = bmpTempF.LockBits(new Rectangle(0, 0, bmpTempF.Width, bmpTempF.Height), ImageLockMode.ReadWrite, bmpTempF.PixelFormat);
-                    int bytesPerPixel = Image.GetPixelFormatSize(bmpTempF.PixelFormat) / 8;
-                    byte* ptrFirstPixel = (byte*)bmpTempData.Scan0;
-                    byte* ptrFirstPixelF = (byte*)bmpTempDataF.Scan0;
-
-                    //Darken backgound/output bitmap data
-                    for (int y = 0; y < bmpTempDataF.Height; y++)
+                    byte* currentLine = ptrFirstPixelB + y * bmpData.Stride;
+                    for (int x = (xStart + mx) * bytesPerPixel; x < (xStart + xStop) * bytesPerPixel; x += bytesPerPixel)
                     {
-                        byte* currentLine = ptrFirstPixelF + y * bmpTempDataF.Stride;
-                        for (int x = 0; x < bmpTempDataF.Stride; x += bytesPerPixel)
-                        {
-                            //Calculate new pixel value (R,G,B)
-                            currentLine[x + 2] = (byte)(currentLine[x + 2] * 0.25);
-                            currentLine[x + 1] = (byte)(currentLine[x + 1] * 0.25);
-                            currentLine[x] = (byte)(currentLine[x] * 0.25);
-                        }
+                        //Calculate new pixel value (R,G,B)
+                        currentLine[x + 2] = (byte)(currentLine[x + 2] * 0.25);
+                        currentLine[x + 1] = (byte)(currentLine[x + 1] * 0.25);
+                        currentLine[x] = (byte)(currentLine[x] * 0.25);
                     }
+                }
 
-                    //Loop through bitmap/search amongus
-                    for (int y = 0; y < yStop - 4; y++)
+                //Loop through bitmap/search amongus
+                for (int y = yStart; y < yStart + yStop - 4; y++)
+                {
+                    for (int x = xStart; x < xStart + xStop - 3; x++)
                     {
-                        for (int x = 0; x < xStop - 3; x++)
+                        bool mirror;
+                        for (int m = 0; m < 2; m++)
                         {
-                            for (int m = 0; m < 2; m++)
+                            bool search = true;
+                            int border = 0;
+
+                            if (m == 0) mirror = false;
+                            else mirror = true;
+
+                            c1 = getPixelColor(tXco(x, -0.5, mirror), y);
+                            c2 = getPixelColor(tXco(x, 0.5, mirror), y + 1);
+
+                            //Check amongus shape
+                            if (!compareColor(c2, getPixelColor(tXco(x, 1.5, mirror), y + 1)) || compareColor(c1, c2) || compareColor(c1, getPixelColor(tXco(x, -1.5, mirror), y))) continue;
+                            for (int row = 0; row < 5; row++)
                             {
-                                bool mirror = false;
-                                bool search = true;
-                                int border = 0;
-
-                                if (m == 0) mirror = false;
-                                else if (m == 1) mirror = true;
-
-                                c1 = getPixelColor(tXco(x, -0.5, mirror), y);
-                                c2 = getPixelColor(tXco(x, 0.5, mirror), y + 1);
-
-                                if (!compareColor(c2, getPixelColor(tXco(x, 1.5, mirror), y + 1)) || compareColor(c1, c2) || compareColor(c1, getPixelColor(tXco(x, -1.5, mirror), y))) continue;
-                                //Check amongus shape
-                                for (int row = 0; row < 5; row++)
+                                for (int column = 0; column < 4; column++)
                                 {
-                                    for (int column = 0; column < 4; column++)
+                                    if (amongus[row, column] == 2 && !compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y + row)))
                                     {
-                                        if (amongus[row, column] == 2 && !compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y + row)))
-                                        {
-                                            search = false;
-                                            break;
-                                        }
-                                        else if (amongus[row, column] == 0 && compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y + row)))
+                                        search = false;
+                                        break;
+                                    }
+                                    else if (amongus[row, column] == 0 && compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y + row)))
+                                    {
+                                        border++;
+                                    }
+                                }
+                            }
+                            //Check border around amongus
+                            if (search)
+                            {
+                                if (x < placeData.Width - 5 && !mirror || x > 0 && mirror)
+                                {
+                                    for (int row = 0; row < 5; row++)
+                                    {
+                                        if (compareColor(c1, getPixelColor(tXco(x, 2.5, mirror), y + row)))
                                         {
                                             border++;
                                         }
                                     }
                                 }
-                                //Check around amongus shape
-                                if (search)
+                                if ((x > 0 && !mirror) || x < placeData.Width - 5 && mirror)
                                 {
-                                    if (x < xStop - 5 && !mirror || x > 0 && mirror)
+                                    for (int row = 1; row < 3; row++)
                                     {
-                                        for (int row = 0; row < 5; row++)
+                                        if (compareColor(c1, getPixelColor(tXco(x, -2.5, mirror), y + row)))
                                         {
-                                            if (compareColor(c1, getPixelColor(tXco(x, 2.5, mirror), y + row)))
-                                            {
-                                                border++;
-                                            }
+                                            border++;
                                         }
-                                    }
-                                    if ((x > 0 && !mirror) || x < xStop - 5 && mirror)
-                                    {
-                                        for (int row = 1; row < 3; row++)
-                                        {
-                                            if (compareColor(c1, getPixelColor(tXco(x, -2.5, mirror), y + row)))
-                                            {
-                                                border++;
-                                            }
-                                        }
-                                    }
-                                    if (y > 0)
-                                    {
-                                        for (int column = 1; column < 4; column++)
-                                        {
-                                            if (compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y - 1)))
-                                            {
-                                                border++;
-                                            }
-                                        }
-                                    }
-                                    if (border >= 5)
-                                    {
-                                        search = false;
-                                        break;
                                     }
                                 }
-                                //If amongus found --> draw amongus to output bitmap data
-                                if (search)
+                                if (y > 0)
                                 {
+                                    for (int column = 1; column < 4; column++)
+                                    {
+                                        if (compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y - 1)))
+                                        {
+                                            border++;
+                                        }
+                                    }
+                                }
+                                if (border < 5)
+                                {
+                                    //If amongus found --> draw amongus to output bitmap data
+                                    search = false;
                                     for (int row = 0; row < 5; row++)
                                     {
                                         for (int column = 0; column < 4; column++)
                                         {
-                                            byte* currentLine = ptrFirstPixelF + (y + row) * bmpTempDataF.Stride;
+                                            byte* currentLine = ptrFirstPixelB + (y + row) * bmpData.Stride;
                                             if (amongus[row, column] >= 2 && compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y + row)))
                                             {
                                                 currentLine[tXco(x, column - 1.5, mirror) * bytesPerPixel + 2] = (byte)c1[0];
@@ -224,29 +208,23 @@ namespace amongUsFinder
                             }
                         }
                     }
-                    bmpTemp.UnlockBits(bmpTempData);
-                    bmpTempF.UnlockBits(bmpTempDataF);
-
-                    mutex.WaitOne();
-                    g = Graphics.FromImage(bmp);
-                    g.DrawImage(bmpTempF, xStart, yStart, xStop, yStop);
-                    mutex.ReleaseMutex();
-
-                    int[] getPixelColor(int x, int y)
-                    {
-                        byte* currentLine = ptrFirstPixel + y * bmpTempData.Stride;
-                        return new int[3] { currentLine[x * bytesPerPixel + 2], currentLine[x * bytesPerPixel + 1], currentLine[x * bytesPerPixel] };
-                    }
                 }
-                bmpTemp.Dispose();
-                bmpTempF.Dispose();
 
-                bool compareColor(int[] color1, int[] color2)
+                byte* getPixelColor(int x, int y)
+                {
+                    byte* currentLine = ptrFirstPixel + y * placeData.Stride + x * bytesPerPixel;
+                    return currentLine;
+                }
+
+                bool compareColor(byte* color1, byte* color2)
                 {
                     bool match = true;
-                    for (int i = 0; i < color1.Length; i++)
+                    for (int i = 0; i < bytesPerPixel; i++)
                     {
-                        if (color1[i] != color2[i]) match = false;
+                        if (color1[i] != color2[i])
+                        {
+                            match = false; break;
+                        }
                     }
                     return match;
                 }
@@ -276,10 +254,10 @@ namespace amongUsFinder
             }
         }
 
-        public int roundUpDown(double value, bool roundUp)
+        public int roundUpDown(double value)
         {
             int result = (int)value;
-            if (result < value && !roundUp) result++;
+            if (result < value) result++;
             return result;
         }
     }
