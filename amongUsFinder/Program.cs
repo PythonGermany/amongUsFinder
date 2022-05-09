@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Threading;
 
 namespace amongUsFinder
@@ -13,26 +14,24 @@ namespace amongUsFinder
                 if (!s.initializeInputParameters()) continue;
                 s.setStartTime();
                 s.outputMessage("Task started!");
-                s.initializeMainThreads();
-                s.startMainThreads();
-                Thread.CurrentThread.Priority = ThreadPriority.Lowest;
-
-                s.outputProgress();
-                if (!s.checkSucessfulCompletion()) continue;
-                s.waitMainThreads();
-                Thread.CurrentThread.Priority = ThreadPriority.Normal;
-
-                if (!s.loadLocation.Contains("."))
-                {
-                   s.renamePictures();
-                   s.generateTextFile();
-                }
-
                 if (s.loadLocation.Contains("."))
                 {
+                    //$"{ s.loadLocation.Split('.')[0]}_searched.{ s.loadLocation.Split('.')[1]}"
+                    s.processImage(s.loadLocation, 0);
                     s.outputMessage($"{s.amongusCount[0]} amongi were found! ({s.loadLocation.Split('.')[0]}_searched.{s.loadLocation.Split('.')[1]})");
                 }
-                s.outputMessage($@"Task comlpeted in {DateTime.Now - s.startTime:mm\:ss\.fff} --------------------------------\n");
+                else
+                {
+                    s.initializeThreads();
+                    s.startMainThreads();
+                    Thread.CurrentThread.Priority = ThreadPriority.Normal;
+                    s.outputProgress();
+                    if (!s.checkSucessfulCompletion()) continue;
+                    s.waitMainThreads();
+                    s.renamePictures();
+                    s.generateTextFile();
+                }
+                s.outputMessage($@"Task comlpeted in {DateTime.Now - s.startTime:mm\:ss\.fff}" + " --------------------------------\n");
                 s.swLogFile.Close();
             }
         }

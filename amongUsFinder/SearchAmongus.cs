@@ -8,11 +8,11 @@ using System.Diagnostics;
 
 namespace amongUsFinder
 {
-    internal class SearchAmongus
+    unsafe internal class SearchAmongus
     {
         public DateTime startTime;
         TimeSpan processTime;
-        Thread[] threads;
+        Thread[] mainThreads;
         int[] threadShift;
         int mainThreadCount = Environment.ProcessorCount / 4;
         public string loadLocation;
@@ -35,6 +35,7 @@ namespace amongUsFinder
         bool benchmark = true;
         Stopwatch s = new Stopwatch();
         int iterations = 0;
+        int locIteration = 0;
         long overallTime = 0;
         long timeFromLastAction = 0;
 
@@ -44,6 +45,7 @@ namespace amongUsFinder
             loadLocation = $@"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\{Console.ReadLine()}";
             if (loadLocation.Contains("."))
             {
+                //Input parameters for single picture processing
                 if (!File.Exists(loadLocation))
                 {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: Input image does not exist");
@@ -59,6 +61,7 @@ namespace amongUsFinder
             }
             else
             {
+                //Input parameters for image sequence processing
                 if (!Directory.Exists(loadLocation))
                 {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: Input folder does not exist");
@@ -80,15 +83,21 @@ namespace amongUsFinder
                             Directory.Delete(saveLocation, true);
                             Directory.CreateDirectory(saveLocation);
                         }
-                        else return false; 
+                        else
+                        {
+                            Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Task terminated ---------------------------------------------------------------------------\n");
+                            return false;
+                        } 
                     }
                     else return false;
                 }
-                indexStart = getInput("Enter start point", 1);
                 string[] loadFolderFiles = Directory.GetFiles(loadLocation, "*.*", SearchOption.TopDirectoryOnly);
+                indexStart = getInput("Enter start point", Convert.ToInt32(getFileName(loadFolderFiles[0], false).Split('.')[0]));
                 indexStop = getInput("Enter stop point", Convert.ToInt32(getFileName(loadFolderFiles[loadFolderFiles.Length - 1], false).Split('.')[0]));
                 indexStep = getInput("Enter step length", 1);
                 imagesToProcess = roundUp(((double)indexStop - indexStart + 1) / indexStep);
+
+                //Check for missing files
                 List<int> filesMissing = new List<int>();
                 for (int i = indexStart; i < indexStop - indexStart + 1; i += indexStep)
                 {
@@ -118,6 +127,8 @@ namespace amongUsFinder
                 }
                 swLogFile = new StreamWriter(saveLocation + @"\log.txt");
             }
+            //images = new Bitmap[imagesToProcess];
+            //imagesData = new BitmapData[imagesToProcess];
             amongusCount = new int[imagesToProcess];
             picturesProcessed = new int[mainThreadCount];
             return true;
@@ -128,9 +139,10 @@ namespace amongUsFinder
             startTime = DateTime.Now;
         }
 
-        public void initializeMainThreads()
+        public void initializeThreads()
         {
-            threads = new Thread[mainThreadCount];
+            //dataThreads = new Thread[mainThreadCount];
+            mainThreads = new Thread[mainThreadCount];
             threadShift = new int[mainThreadCount];
             for (int i = 0; i < threadShift.Length; i++)
             {
@@ -143,57 +155,64 @@ namespace amongUsFinder
             int ct = 0;
             foreach (int value in threadShift)
             {
-                threads[ct] = new Thread(() => searchAmongus(value));
+                mainThreads[ct] = new Thread(() => processImage(loadLocation, value));
                 ct++;
             }
-            for (int i = 0; i < threads.Length; i++)
+            for (int i = 0; i < mainThreads.Length; i++)
             {
-                threads[i].Start();
+                mainThreads[i].Start();
             }
         }
 
-        unsafe public void searchAmongus(int shift = 0)
+        public void processImage(string inputFolder, int shift, string inputFile = null)
         {
+            startBenchmark(shift);
             Thread.CurrentThread.Priority = ThreadPriority.Highest;
-            int amongUsFound;
-            int loopId = shift;
-            Thread[] threadsQ = new Thread[3];
-            Bitmap bmp;
-            Bitmap place;
             picturesProcessed[shift] = 0;
-
+            int amongUsFound = 0;
+            int loopId = shift;
+            Bitmap bmpInput;
+            Thread[] threadsQ = new Thread[3];
+            string tempPathLoad = $@"{loadLocation}\{indexStart + mainThreadCount * indexStep:00000}.png";
             try
             {
-                if (loadLocation.Contains(".")) place = new Bitmap(loadLocation);
-                else place = new Bitmap($@"{loadLocation}\{indexStart + shift * indexStep:00000}.png");
+                bmpInput = new Bitmap(tempPathLoad);
             }
             catch (Exception)
             {
-                Console.WriteLine($@"{DateTime.Now:HH:mm:ss.fff} | Error: Input file missing ({loadLocation}{indexStart + shift * indexStep:00000}.png)");
+                Console.WriteLine($@"{ DateTime.Now:HH: mm: ss.fff} | Error: Input file missing ({tempPathLoad})");
                 error = true;
                 Thread.CurrentThread.Abort();
                 return;
             }
-            bmp = new Bitmap(place.Width, place.Height, place.PixelFormat);
-            int bytesPerPixel = Image.GetPixelFormatSize(place.PixelFormat) / 8;
-            BitmapData placeData = place.LockBits(new Rectangle(0, 0, place.Width, place.Height), ImageLockMode.ReadOnly, place.PixelFormat);
-            BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.WriteOnly, bmp.PixelFormat);
-            byte* ptrFirstPixel = (byte*)placeData.Scan0;
-            byte* ptrFirstPixelB = (byte*)bmpData.Scan0;
+            updateBenchmark(shift, 1, "Load", false);
+            Bitmap bmpOutput = new Bitmap(bmpInput.Width, bmpInput.Height, bmpInput.PixelFormat);
 
-            double threadW = 0.5 * place.Width;
-            double threadH = 0.5 * place.Height;
+            double threadW = 0.5 * bmpInput.Width;
+            double threadH = 0.5 * bmpInput.Height;
             int[,] splitParameters = new int[4, 4] { {0, 0, roundUp(threadW), roundUp(threadH)},
                                                      {roundUp(threadW) - 3, 0, (int)threadW + 3, (int)threadH},
                                                      {0, roundUp(threadH) - 3, (int)threadW, (int)threadH + 3},
                                                      {roundUp(threadW) - 3, roundUp(threadH) - 3, (int)threadW + 3, (int)threadH + 3} };
-            
-            //Loop through pictures
+
+            int bytesPerPixel = Image.GetPixelFormatSize(bmpInput.PixelFormat) / 8;
+            BitmapData bmpInputData;
+            BitmapData bmpOutputData;
+            byte* ptrInput;
+            byte* ptrOutput;
+            updateBenchmark(shift, 1, "Setup", true);
+
             for (int i = indexStart + shift * indexStep; i <= indexStop; i += mainThreadCount * indexStep)
             {
-                startBenchmark(shift, 0, 0);
-                amongUsFound = 0;
-                //Start quad threads
+                tempPathLoad = $@"{loadLocation}\{i:00000}.png";
+                bmpInput = new Bitmap(tempPathLoad);
+                bmpOutput = new Bitmap(bmpInput.Width, bmpInput.Height, bmpInput.PixelFormat);
+                bmpInputData = bmpInput.LockBits(new Rectangle(0, 0, bmpInput.Width, bmpInput.Height), ImageLockMode.ReadOnly, bmpInput.PixelFormat);
+                bmpOutputData = bmpOutput.LockBits(new Rectangle(0, 0, bmpOutput.Width, bmpOutput.Height), ImageLockMode.WriteOnly, bmpOutput.PixelFormat);
+                ptrInput = (byte*)bmpInputData.Scan0;
+                ptrOutput = (byte*)bmpOutputData.Scan0;
+                updateBenchmark(shift, 20, "Load&Lock", false);
+
                 threadsQ[0] = new Thread(() => searchQuarter(0, 0, splitParameters[0, 0], splitParameters[0, 1], splitParameters[0, 2], splitParameters[0, 3]));
                 threadsQ[1] = new Thread(() => searchQuarter(3, 0, splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
                 threadsQ[2] = new Thread(() => searchQuarter(0, 3, splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
@@ -202,67 +221,45 @@ namespace amongUsFinder
                     threadsQ[t].Priority = ThreadPriority.Highest;
                     threadsQ[t].Start();
                 }
+                updateBenchmark(shift, 20, "StartThreads", false);
                 searchQuarter(3, 3, splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
-
                 //Wait for threads to finish
                 for (int t = 0; t < threadsQ.Length; t++)
                 {
                     threadsQ[t].Join();
                 }
-                place.UnlockBits(placeData);
-                bmp.UnlockBits(bmpData);
-                updateBenchmark(shift, 0, 0, 10, "UnlockB", false);
-                if (loadLocation.Contains(".")) bmp.Save($"{loadLocation.Split('.')[0]}_searched.{loadLocation.Split('.')[1]}", ImageFormat.Png);
-                else bmp.Save($@"{saveLocation}\{i:00000}.png", ImageFormat.Png);
-                updateBenchmark(shift, 0, 0, 10, "SaveP", false);
-                place.Dispose();
-                bmp.Dispose();
+                updateBenchmark(shift, 20, "FinishThreads", false);
+                bmpInput.UnlockBits(bmpInputData);
+                bmpInput.Dispose();
+                bmpOutput.UnlockBits(bmpOutputData);
+                bmpOutput.Save($@"{saveLocation}\{i:00000}.png", ImageFormat.Png);
+                bmpOutput.Dispose();
                 amongusCount[loopId] = amongUsFound;
                 loopId += mainThreadCount;
                 picturesProcessed[shift]++;
-                if (!loadLocation.Contains(".") && i <= indexStop - mainThreadCount * indexStep)
-                {
-                    updateBenchmark(shift, 0, 0, 10, "DiB", false);
-                    try
-                    {
-                        place = new Bitmap($@"{loadLocation}\{i + mainThreadCount * indexStep:00000}.png");
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine($@"{ DateTime.Now:HH: mm: ss.fff} | Error: Input file missing ({loadLocation}{i + mainThreadCount * indexStep:00000}.png)");
-                        error = true;
-                        Thread.CurrentThread.Abort();
-                    }
-                    bmp = new Bitmap(place.Width, place.Height, place.PixelFormat);
-                    updateBenchmark(shift, 0, 0, 10, "LoadP", true);
-                    placeData = place.LockBits(new Rectangle(0, 0, place.Width, place.Height), ImageLockMode.ReadOnly, place.PixelFormat);
-                    bmpData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.WriteOnly, bmp.PixelFormat);
-                    ptrFirstPixel = (byte*)placeData.Scan0;
-                    ptrFirstPixelB = (byte*)bmpData.Scan0;
-                }
-                stopBenchmark(shift, 0, 0, 10);
+                updateBenchmark(shift, 20, "Unlock&Save", true);
             }
 
-            unsafe void searchQuarter(int mx, int my, int xStart, int yStart, int xStop, int yStop)
+            void searchQuarter(int mx, int my, int xStart, int yStart, int xStop, int yStop)
             {
                 byte* c1 = stackalloc byte[3];
                 byte* c2 = stackalloc byte[3];
 
                 //Darken backgound/output bitmap data
+                double* dark = stackalloc double[3];
                 for (int y = yStart + my; y < yStart + yStop; y++)
                 {
-                    byte* currentLine = ptrFirstPixel + y * placeData.Stride;
-                    byte* currentLineB = ptrFirstPixelB + y * bmpData.Stride;
+                    byte* currentLine = ptrInput + y * bmpInputData.Stride;
+                    byte* currentLineB = ptrOutput + y * bmpOutputData.Stride;
                     for (int x = (xStart + mx) * bytesPerPixel; x < (xStart + xStop) * bytesPerPixel; x += bytesPerPixel)
                     {
                         //Calculate new pixel value (R,G,B)
                         currentLineB[x + 3] = currentLine[x + 3];
-                        currentLineB[x + 2] = (byte)(currentLine[x + 2] * 0.25);
-                        currentLineB[x + 1] = (byte)(currentLine[x + 1] * 0.25);
-                        currentLineB[x] = (byte)(currentLine[x] * 0.25);
+                        currentLineB[x + 2] = (byte)(currentLine[x + 2] * dark[2]);
+                        currentLineB[x + 1] = (byte)(currentLine[x + 1] * dark[1]);
+                        currentLineB[x] = (byte)(currentLine[x] * dark[0]);
                     }
                 }
-                updateBenchmark(shift, xStart, yStart, 10, "DarkenB", false);
 
                 //Loop through bitmap/search amongus
                 for (int y = yStart; y < yStart + yStop - 4; y++)
@@ -302,7 +299,7 @@ namespace amongUsFinder
                             //Check border around amongus
                             if (search)
                             {
-                                if (x < placeData.Width - 5 && !mirror || x > 0 && mirror)
+                                if (x < bmpInputData.Width - 5 && !mirror || x > 0 && mirror)
                                 {
                                     for (int row = 0; row < 5; row++)
                                     {
@@ -312,7 +309,7 @@ namespace amongUsFinder
                                         }
                                     }
                                 }
-                                if ((x > 0 && !mirror) || x < placeData.Width - 5 && mirror)
+                                if ((x > 0 && !mirror) || x < bmpInputData.Width - 5 && mirror)
                                 {
                                     for (int row = 1; row < 3; row++)
                                     {
@@ -340,7 +337,7 @@ namespace amongUsFinder
                                     {
                                         for (int column = 0; column < 4; column++)
                                         {
-                                            byte* currentLine = ptrFirstPixelB + (y + row) * bmpData.Stride;
+                                            byte* currentLine = ptrOutput + (y + row) * bmpOutputData.Stride;
                                             if (amongus[row, column] >= 2 && compareColor(c1, getPixelColor(tXco(x, -1.5 + column, mirror), y + row)))
                                             {
                                                 currentLine[tXco(x, column - 1.5, mirror) * bytesPerPixel + 2] = c1[2];
@@ -363,14 +360,12 @@ namespace amongUsFinder
                         }
                     }
                 }
-                updateBenchmark(shift, xStart, yStart, 10, "SearchP", false);
 
                 byte* getPixelColor(int x, int y)
                 {
-                    byte* currentLine = ptrFirstPixel + y * placeData.Stride + x * bytesPerPixel;
+                    byte* currentLine = ptrInput + y * bmpInputData.Stride + x * bytesPerPixel;
                     return currentLine;
                 }
-
                 bool compareColor(byte* color1, byte* color2)
                 {
                     bool match = true;
@@ -383,13 +378,12 @@ namespace amongUsFinder
                     }
                     return match;
                 }
-            }
-            
-            int tXco(int xC, double move, bool mirror)
-            {
-                int f = 1;
-                if (mirror) f = -1;
-                return (int)(xC + 1.5 + move * f);
+                int tXco(int xC, double move, bool mirror)
+                {
+                    int f = 1;
+                    if (mirror) f = -1;
+                    return (int)(xC + 1.5 + move * f);
+                }
             }
         }
         public void outputProgress()
@@ -406,6 +400,7 @@ namespace amongUsFinder
                     min = DateTime.Now.Minute;
                 }
                 if (progressState >= 100) break;
+                //Stop update loop if one main thread reports an error
                 if (error)
                 {
                     break;
@@ -419,21 +414,13 @@ namespace amongUsFinder
             }
         }
 
-        public void waitMainThreads()
-        {
-            for (int i = 0; i < threads.Length; i++)
-            {
-                threads[i].Join();
-            }
-        }
-
         public bool checkSucessfulCompletion()
         {
             if (error)
             {
-                for (int i = 0; i < threads.Length; i++)
+                for (int i = 0; i < mainThreads.Length; i++)
                 {
-                    threads[i].Abort();
+                    mainThreads[i].Abort();
                 }
                 swLogFile.Close();
                 Directory.Delete(saveLocation, true);
@@ -443,10 +430,18 @@ namespace amongUsFinder
             return true;
         }
 
-        public void renamePictures()
+        public void waitMainThreads()
         {
+            for (int i = 0; i < mainThreads.Length; i++)
+            {
+                mainThreads[i].Join();
+            }
             processTime = DateTime.Now - startTime;
             outputMessage($"Picture processing completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {roundUpDouble(processTime.TotalSeconds / imagesToProcess, 3)}s per picture!");
+        }
+
+        public void renamePictures()
+        {
             if (indexStep > 1)
             {
                 int iNewName = 0;
@@ -527,17 +522,16 @@ namespace amongUsFinder
             return result;
         }
 
-
-        void startBenchmark(int sh, int xs, int ys)
+        void startBenchmark(int sh, int xs = 0, int ys = 0)
         {
             if (sh == 0 && xs == 0 && ys == 0) s.Restart();
         }
 
-        void updateBenchmark(int sh, int xs, int ys, int it, string action, bool last)
+        void updateBenchmark(int sh, int it, string action, bool last, int xs = 0, int ys = 0)
         {
             if (sh == 0 && xs == 0 && ys == 0 && benchmark)
             {
-                if (iterations % it == 0)
+                if (locIteration % it == 0)
                 {
                     Console.Write($"{s.ElapsedMilliseconds - timeFromLastAction:000}-{action}|");
                     if (last) Console.WriteLine();
@@ -546,7 +540,7 @@ namespace amongUsFinder
             }
         }
 
-        void stopBenchmark(int sh, int xs, int ys, int it)
+        void stopBenchmark(int sh, int it, int xs = 0, int ys = 0)
         {
             if (sh == 0 && xs == 0 && ys == 0 && benchmark)
             {
