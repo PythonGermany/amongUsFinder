@@ -54,10 +54,8 @@ namespace amongUsFinder
                 indexStop = 1;
                 indexStep = 1;
                 imagesToProcess = 1;
-                int folderIndex = loadLocation.LastIndexOf(@"\");
-                saveLocation = loadLocation.Substring(0, folderIndex);
-                string fileName = loadLocation.Substring(folderIndex + 1);
-                swLogFile = new StreamWriter(saveLocation + $@"\log_{fileName.Split('.')[0]}.txt");
+                saveLocation = getFileName(loadLocation, true);
+                swLogFile = new StreamWriter(saveLocation + $@"\log_{getFileName(loadLocation, false).Split('.')[0]}.txt");
             }
             else
             {
@@ -73,21 +71,26 @@ namespace amongUsFinder
                 else if (Directory.GetFiles(saveLocation, "*.*", SearchOption.TopDirectoryOnly).Length > 0)
                 {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: Output folder is not empty ({saveLocation})");
-                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Do you want to REPLACE the existing folder? (y/n)");
-                    string input = Console.ReadLine();
-                    if (input == "y")
+                    if (saveLocation != "")
                     {
-                        Directory.Delete(saveLocation, true);
-                        Directory.CreateDirectory(saveLocation);
+                        Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Do you want to REPLACE the existing folder? (y/n)");
+                        string input = Console.ReadLine();
+                        if (input == "y")
+                        {
+                            Directory.Delete(saveLocation, true);
+                            Directory.CreateDirectory(saveLocation);
+                        }
+                        else return false; 
                     }
-                    else if (input == "n") return false;
+                    else return false;
                 }
                 indexStart = getInput("Enter start point", 1);
-                indexStop = getInput("Enter stop point", Directory.GetFiles(loadLocation, "*.*", SearchOption.TopDirectoryOnly).Length);
+                string[] loadFolderFiles = Directory.GetFiles(loadLocation, "*.*", SearchOption.TopDirectoryOnly);
+                indexStop = getInput("Enter stop point", Convert.ToInt32(getFileName(loadFolderFiles[loadFolderFiles.Length - 1], false).Split('.')[0]));
                 indexStep = getInput("Enter step length", 1);
                 imagesToProcess = roundUp(((double)indexStop - indexStart + 1) / indexStep);
                 List<int> filesMissing = new List<int>();
-                for (int i = indexStart; i <= indexStart + indexStop; i += indexStep)
+                for (int i = indexStart; i < indexStop - indexStart + 1; i += indexStep)
                 {
                     if (!File.Exists(loadLocation + $@"\{i:00000}.png"))
                     {
@@ -103,10 +106,10 @@ namespace amongUsFinder
                     {
                         foreach (var file in filesMissing)
                         {
-                            Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | IMage {file:00000}.png is missing");
+                            Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Image {file:00000}.png is missing");
                         }
                     }
-                    if (Directory.GetFiles(saveLocation, "*.*", SearchOption.TopDirectoryOnly).Length == 0)
+                    if (loadFolderFiles.Length == 0)
                     {
                         Directory.Delete(saveLocation, true);
                     }
@@ -496,6 +499,12 @@ namespace amongUsFinder
                 }
             }
             return output;
+        }
+        string getFileName(string path , bool returnPath)
+        {
+            int folderIndex = path.LastIndexOf(@"\");
+            if (returnPath) return path.Substring(0, folderIndex);
+            else return path.Substring(folderIndex + 1);
         }
 
         public void outputMessage(string output)
