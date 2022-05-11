@@ -15,7 +15,7 @@ namespace amongUsFinder
                 s.outputMessage("Task started!");
                 if (s.loadLocation.Contains("."))
                 {
-                    s.processImage(s.loadLocation);
+                    s.processImage(s.loadLocation, s.loadLocation);
                     s.outputMessage($"{s.amongusCount[0]} amongi were found! ({s.loadLocation.Split('.')[0]}_searched.{s.loadLocation.Split('.')[1]})");
                 }
                 else
