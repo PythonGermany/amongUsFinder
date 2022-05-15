@@ -211,7 +211,7 @@ namespace amongUsFinder
             return new int[4, 4] { {0, 0, roundUpInt(threadW), roundUpInt(threadH)},
                                                      {roundUpInt(threadW) - 3, 0, (int)threadW + 3, (int)threadH},
                                                      {0, roundUpInt(threadH) - 3, (int)threadW, (int)threadH + 3},
-                                                     {roundUpInt(threadW) - 3, roundUpInt(threadH) - 3, (int)threadW + 3, (int)threadH + 3} };
+                                                     {(int)threadW - 3, (int)threadH - 3, roundUpInt(threadW) + 3, roundUpInt(threadH) + 3} };
         }
         public int startQuadThreads(byte*[] ptr, BitmapData[] bmpD, Thread[] threadsQ, int[,] splitParameters, int bytesPerPixel)
         {
