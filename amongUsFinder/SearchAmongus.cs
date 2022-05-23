@@ -215,21 +215,21 @@ namespace amongUsFinder
             Console.WriteLine(shapeH);
             return new int[4, 4] { {0, 0, roundUpInt(threadW), roundUpInt(threadH)},
                                    {roundUpInt(threadW) - shapeW, 0, (int)threadW + shapeW, (int)threadH},
-                                   {0, roundUpInt(threadH) - shapeW, (int)threadW, (int)threadH + shapeW},
-                                   {(int)threadW - shapeW, (int)threadH - shapeW, roundUpInt(threadW) + shapeW, roundUpInt(threadH) + shapeW} };
+                                   {0, roundUpInt(threadH) - shapeH, (int)threadW, (int)threadH + shapeH},
+                                   {(int)threadW - shapeW, (int)threadH - shapeH, roundUpInt(threadW) + shapeW, roundUpInt(threadH) + shapeH} };
         }
         public int startQuadThreads(byte*[] ptr, BitmapData[] bmpD, Thread[] threadsQ, int[,] splitParameters, int bytesPerPixel)
         {
             int amongUsFound = 0;
             threadsQ[0] = new Thread(() => searchQuarter(0, 0, splitParameters[0, 0], splitParameters[0, 1], splitParameters[0, 2], splitParameters[0, 3]));
             threadsQ[1] = new Thread(() => searchQuarter(shapeW, 0, splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
-            threadsQ[2] = new Thread(() => searchQuarter(0, shapeW, splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
+            threadsQ[2] = new Thread(() => searchQuarter(0, shapeH, splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
             for (int t = 0; t < threadsQ.Length; t++)
             {
                 threadsQ[t].Priority = ThreadPriority.Highest;
                 threadsQ[t].Start();
             }
-            searchQuarter(shapeW, shapeW, splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
+            searchQuarter(shapeW, shapeH, splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
             //Wait for threads to finish
             for (int t = 0; t < threadsQ.Length; t++)
             {
