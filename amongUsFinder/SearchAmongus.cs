@@ -29,6 +29,7 @@ namespace amongUsFinder
                                          { 2, 2, 2, 2},
                                          { 3, 2, 3, 2},
                                          { 0, 3, 0, 3} };
+        int shapeW, shapeH;
 
         //Benchmark stuff
         bool benchmark = true;
@@ -204,27 +205,31 @@ namespace amongUsFinder
             bitmapData[1] = bitmap[1].LockBits(new Rectangle(0, 0, bitmap[1].Width, bitmap[1].Height), ImageLockMode.WriteOnly, bitmap[1].PixelFormat);
             return new byte*[2] { (byte*)bitmapData[0].Scan0, (byte*)bitmapData[1].Scan0 };
         }
-        public int[,] generateSplitParameter(Bitmap input)
+        public int[,] generateSplitParameter(Bitmap bitmap)
         {
-            double threadW = 0.5 * input.Width;
-            double threadH = 0.5 * input.Height;
+            double threadW = 0.5 * bitmap.Width;
+            double threadH = 0.5 * bitmap.Height;
+            shapeW = amongus.GetUpperBound(1);
+            shapeH = amongus.GetUpperBound(0);
+            Console.WriteLine(shapeW);
+            Console.WriteLine(shapeH);
             return new int[4, 4] { {0, 0, roundUpInt(threadW), roundUpInt(threadH)},
-                                                     {roundUpInt(threadW) - 3, 0, (int)threadW + 3, (int)threadH},
-                                                     {0, roundUpInt(threadH) - 3, (int)threadW, (int)threadH + 3},
-                                                     {(int)threadW - 3, (int)threadH - 3, roundUpInt(threadW) + 3, roundUpInt(threadH) + 3} };
+                                   {roundUpInt(threadW) - shapeW, 0, (int)threadW + shapeW, (int)threadH},
+                                   {0, roundUpInt(threadH) - shapeW, (int)threadW, (int)threadH + shapeW},
+                                   {(int)threadW - shapeW, (int)threadH - shapeW, roundUpInt(threadW) + shapeW, roundUpInt(threadH) + shapeW} };
         }
         public int startQuadThreads(byte*[] ptr, BitmapData[] bmpD, Thread[] threadsQ, int[,] splitParameters, int bytesPerPixel)
         {
             int amongUsFound = 0;
             threadsQ[0] = new Thread(() => searchQuarter(0, 0, splitParameters[0, 0], splitParameters[0, 1], splitParameters[0, 2], splitParameters[0, 3]));
-            threadsQ[1] = new Thread(() => searchQuarter(3, 0, splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
-            threadsQ[2] = new Thread(() => searchQuarter(0, 3, splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
+            threadsQ[1] = new Thread(() => searchQuarter(shapeW, 0, splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
+            threadsQ[2] = new Thread(() => searchQuarter(0, shapeW, splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
             for (int t = 0; t < threadsQ.Length; t++)
             {
                 threadsQ[t].Priority = ThreadPriority.Highest;
                 threadsQ[t].Start();
             }
-            searchQuarter(3, 3, splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
+            searchQuarter(shapeW, shapeW, splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
             //Wait for threads to finish
             for (int t = 0; t < threadsQ.Length; t++)
             {
@@ -254,9 +259,9 @@ namespace amongUsFinder
                 }
 
                 //Loop through bitmap/search amongus
-                for (int y = yStart; y < yStart + yStop - 4; y++)
+                for (int y = yStart; y < yStart + yStop - shapeH; y++)
                 {
-                    for (int x = xStart * bytesPerPixel + 6; x < (xStart + xStop - 3) * bytesPerPixel + 6; x += bytesPerPixel)
+                    for (int x = xStart * bytesPerPixel + 6; x < (xStart + xStop - shapeW) * bytesPerPixel + 6; x += bytesPerPixel)
                     {
                         for (int m = -1; m <= 1; m += 2)
                         {
@@ -270,9 +275,9 @@ namespace amongUsFinder
                             searchShape();
                             void searchShape()
                             {
-                                for (int row = 0; row < 5; row++)
+                                for (int row = 0; row < shapeH + 1; row++)
                                 {
-                                    for (int column = 0; column < 4; column++)
+                                    for (int column = 0; column < shapeW + 1; column++)
                                     {
                                         int match = compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row));
                                         if (amongus[row, column] == 2 && 0 != match)
