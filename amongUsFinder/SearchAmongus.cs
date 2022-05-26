@@ -191,7 +191,6 @@ namespace amongUsFinder
             amongusCount[0] = startQuadThreads(ptrBmp, bmpData, threadsQ, splitParameter, bytesPerPixel);
             bmp[0].UnlockBits(bmpData[0]);
             bmp[1].UnlockBits(bmpData[1]);
-            string[] fileName = getFileName(loadFile, false).Split('.');
             bmp[1].Save($"{savePath}");
             bmp[0].Dispose();
             bmp[1].Dispose();
@@ -211,8 +210,6 @@ namespace amongUsFinder
             double threadH = 0.5 * bitmap.Height;
             shapeW = amongus.GetUpperBound(1);
             shapeH = amongus.GetUpperBound(0);
-            Console.WriteLine(shapeW);
-            Console.WriteLine(shapeH);
             return new int[4, 4] { {0, 0, roundUpInt(threadW), roundUpInt(threadH)},
                                    {roundUpInt(threadW) - shapeW, 0, (int)threadW + shapeW, (int)threadH},
                                    {0, roundUpInt(threadH) - shapeH, (int)threadW, (int)threadH + shapeH},
@@ -380,7 +377,7 @@ namespace amongUsFinder
                 progressState = currentPicturesProcessed / ((double)(indexStop - indexStart + 1) / indexStep) * 100;
                 if (min != DateTime.Now.Minute)
                 {
-                    outputMessage($"({currentPicturesProcessed}|{imagesToProcess}) Progress: {Math.Round(progressState, 2)}% done");
+                    outputMessage($"({currentPicturesProcessed}|{imagesToProcess}) Progress: {Math.Round(progressState, 2)}% done", true);
                     min = DateTime.Now.Minute;
                 }
                 if (progressState >= 100) break;
@@ -399,7 +396,7 @@ namespace amongUsFinder
                 mainThreads[i].Join();
             }
             processTime = DateTime.Now - startTime;
-            outputMessage($"Picture processing completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {roundUpDouble(processTime.TotalSeconds / imagesToProcess, 4)}s per picture!");
+            outputMessage($"Picture processing completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {roundUpDouble(processTime.TotalSeconds / imagesToProcess, 4)}s per picture!", true);
         }
         public void renamePictures()
         {
@@ -411,7 +408,7 @@ namespace amongUsFinder
                     iNewName++;
                     File.Move($@"{saveLocation}\{i:00000}.png", $@"{saveLocation}\{iNewName:00000}.png");
                 }
-                outputMessage($"Files renamed (from 00001 to {iNewName:00000})");
+                outputMessage($"Files renamed (from 00001 to {iNewName:00000})", true);
             }
         }
         public void generateTextFile()
@@ -423,33 +420,67 @@ namespace amongUsFinder
             }
             swNum.Close();
             swNum.Dispose();
-            outputMessage($"Txt file generated at {saveLocation + @"\amongUsCount.txt"}");
+            outputMessage($@"Txt file generated at {saveLocation}\amongUsCount.txt", true);
+        }
+        public void generateStatisticImage(string dataInput = null)
+        {
+            string dataOutput = saveLocation;
+            bool logToFile = true;
+            Bitmap output = new Bitmap(1000, 250);
+            Graphics g = Graphics.FromImage(output);
+            if (string.IsNullOrEmpty(dataInput)) dataInput = saveLocation + @"\amongUsCount.txt";
+            else
+            {
+                dataOutput = dataInput.Substring(0, dataInput.LastIndexOf(@"\"));
+                logToFile = false;
+            }
+            string[] values = File.ReadAllLines(dataInput);
+            g.DrawLine(Pens.Black, 0, 0, output.Width - 1, 0);
+            g.DrawLine(Pens.Black, 0, 0, 0, output.Height - 1);
+            g.DrawLine(Pens.Black, 0, output.Height - 1, output.Width - 1, output.Height - 1);
+            g.DrawLine(Pens.Black, output.Width - 1, 0, output.Width - 1, output.Height - 1);
+            int maxValue = 0;
+            for (int i = 0; i < values.Length; i++)
+            {
+                int value = Convert.ToInt32(values[i]);
+                if (value > maxValue) maxValue = value;
+            }
+            for (int i = 1; i < output.Width - 2; i++)
+            {
+                double index = (double)i / (output.Width - 2) * values.Length - 1;
+                double nextIndex = (double)(i + 1) / (output.Width - 2) * values.Length - 1;
+                double value = Convert.ToInt32(values[(int)index]) * (1 - (index - (int)index)) + Convert.ToInt32(values[roundUpInt(index)]) * (index - (int)index);
+                double nextValue = Convert.ToInt32(values[(int)nextIndex]) * (1 - (nextIndex - (int)nextIndex)) + Convert.ToInt32(values[roundUpInt(nextIndex)]) * (nextIndex - (int)nextIndex);
+                g.DrawLine(Pens.Red, i, output.Height - 2 - (int)Math.Round((double)value / maxValue * (output.Height - 3)), i + 1, output.Height - 2 - (int)Math.Round((double)nextValue / maxValue * (output.Height - 3)));
+            }
+            output.Save(dataOutput + @"\statistic.png");
+            outputMessage($@"Statistic image generated at {dataOutput}\statistic.png", logToFile);
         }
 
         int getInput(string text, int defaultVal)
         {
-            bool c = false;
+            bool next = false;
             int output = defaultVal;
-            while (!c)
+            while (!next)
             {
-                Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | " + text + $" (default: {defaultVal})");
+                outputMessage(text + $" (default: {defaultVal})", false);
                 string input = Console.ReadLine();
                 if (input != "")
                 {
                     try
                     {
                         output = Convert.ToInt32(input);
-                        c = true;
+                        next = true;
                     }
-                    catch (Exception e)
+                    catch (Exception ex)
                     {
-                        Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: " + e.Message.Trim('.'));
-                        c = false;
+                        outputMessage("Error: " + ex.Message.Trim('.'), false);
+                        next = false;
                     }
                 }
                 else
                 {
-                    c = true;
+                    next = true;
                 }
             }
             return output;
@@ -460,10 +491,10 @@ namespace amongUsFinder
             if (returnPath) return path.Substring(0, folderIndex);
             else return path.Substring(folderIndex + 1);
         }
-        public void outputMessage(string output)
+        public void outputMessage(string output, bool log)
         {
             Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | " + output);
-            swLogFile.WriteLine($"{DateTime.Now:dd.MM.yyyy}; { DateTime.Now:HH:mm:ss.fff} | " + output);
+            if (log) swLogFile.WriteLine($"{DateTime.Now:dd.MM.yyyy}; { DateTime.Now:HH:mm:ss.fff} | " + output);
         }
         public int roundUpInt(double value)
         {

@@ -10,18 +10,13 @@ namespace amongUsFinder
             SearchAmongus s = new SearchAmongus();
             while (true)
             {
-                //Console.WriteLine(args.Length);
-                //foreach (var item in args)
-                //{
-                //    Console.WriteLine(item);
-                //}
                 if (!s.initializeInputParameters()) continue;
                 s.setStartTime();
-                s.outputMessage("Task started!");
+                s.outputMessage("Task started!", true);
                 if (s.loadLocation.Contains("."))
                 {
                     s.processImage(s.loadLocation, $@"{s.loadLocation.Split('.')[0]}_searched.png");
-                    s.outputMessage($"{s.amongusCount[0]} amongi were found! ({s.loadLocation.Split('.')[0]}_searched.{s.loadLocation.Split('.')[1]})");
+                    s.outputMessage($"{s.amongusCount[0]} amongi were found! ({s.loadLocation.Split('.')[0]}_searched.{s.loadLocation.Split('.')[1]})", true);
                 }
                 else
                 {
@@ -33,8 +28,9 @@ namespace amongUsFinder
                     Thread.CurrentThread.Priority = ThreadPriority.Normal;
                     s.renamePictures();
                     s.generateTextFile();
+                    s.generateStatisticImage();
                 }
-                s.outputMessage($@"Task comlpeted in {DateTime.Now - s.startTime:mm\:ss\.fff}" + " ---------------------------------------------------------------\n");
+                s.outputMessage($@"Task comlpeted in {DateTime.Now - s.startTime:mm\:ss\.fff}" + " ---------------------------------------------------------------\n", true);
                 s.swLogFile.Close();
                 s.swLogFile.Dispose();
             }
