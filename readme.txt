@@ -1,4 +1,4 @@
-A fast and efficient script to search images for little amongi in a pixel art picture like reddit r/place.
+A fast and efficient script to search pixel art images for little amongi like from the reddit r/place 2022 event.
 
 It is possible to process either single images or an image sequence named from 00000 to XXXXX.
 It is also possible to process every "n"th image in the sequence e.g. n=2 == skip skip every 2nd picture in the sequence.
