@@ -240,7 +240,7 @@ namespace amongUsFinder
                 byte* c2 = stackalloc byte[3];
                 int stride = bmpD[0].Stride;
 
-                //Darken backgound/output bitmap data
+                //Darken output bitmap
                 for (int y = yStart + my; y < yStart + yStop; y++)
                 {
                     byte* currentLine = ptr[0] + y * stride;
@@ -277,7 +277,7 @@ namespace amongUsFinder
                                     for (int column = 0; column < shapeW + 1; column++)
                                     {
                                         int match = compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row));
-                                        if (amongus[row, column] == 2 && 0 != match)
+                                        if (amongus[row, column] == 2 && match != 0)
                                         {
                                             return;
                                         }
@@ -318,9 +318,9 @@ namespace amongUsFinder
                                         }
                                     }
                                 }
+                                //If amongus found --> highlight amongus on output bitmap
                                 if (border < 5)
                                 {
-                                    //If amongus found --> draw amongus to output bitmap data
                                     for (int row = 0; row < 5; row++)
                                     {
                                         byte* currentLine = ptr[1] + (y + row) * stride;
@@ -349,13 +349,12 @@ namespace amongUsFinder
                                     }
                                     amongUsFound++;
                                     x += 3 * bytesPerPixel;
-                                    m = 2;
+                                    return;
                                 }
                             }
                         }
                     }
                 }
-
                 byte* getPixelColor(int x, int y)
                 {
                     return ptr[0] + y * stride + x;
