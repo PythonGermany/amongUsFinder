@@ -8,9 +8,10 @@ namespace amongUsFinder
         static void Main(string[] args)
         {
             SearchAmongus s = new SearchAmongus();
-            while (true)
+            if (args.Length == 5)
             {
-                if (!s.initializeInputParameters()) continue;
+                if(!s.initializeInputParameters(args))
+                    return;
                 s.setStartTime();
                 s.outputMessage("Task started!", true);
                 if (s.loadLocation.Contains("."))
@@ -30,7 +31,7 @@ namespace amongUsFinder
                     s.generateTextFile();
                     s.generateStatisticImage();
                 }
-                s.outputMessage($@"Task comlpeted in {DateTime.Now - s.startTime:mm\:ss\.fff}" + " ---------------------------------------------------------------\n", true);
+                s.outputMessage($@"Task comlpeted in {DateTime.Now - s.startTime:mm\:ss\.fff}", true);
                 s.swLogFile.Close();
                 s.swLogFile.Dispose();
             }

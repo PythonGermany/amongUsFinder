@@ -31,27 +31,15 @@ namespace amongUsFinder
                                          { 0, 3, 0, 3} };
         int shapeW, shapeH;
 
-        //Benchmark stuff
-        bool benchmark = true;
-        Stopwatch s = new Stopwatch();
-        int iterations = 0;
-        int locIteration = 0;
-        long overallTime = 0;
-        long timeFromLastAction = 0;
-
-        public bool initializeInputParameters()
+        public bool initializeInputParameters(string[] args)
         {
-            Console.WriteLine($@"{DateTime.Now:HH:mm:ss.fff} | Input location ({Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\YOUR INPUT):");
-            loadLocation = $@"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\{Console.ReadLine()}";
+            //Console.WriteLine($@"{DateTime.Now:HH:mm:ss.fff} | Input location ({Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\YOUR INPUT):");
+            loadLocation = args[0];
             if (loadLocation.Contains("."))
             {
                 //Input parameters for single picture processing
                 if (!File.Exists(loadLocation))
-                {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: Input image does not exist");
-                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Task terminated ---------------------------------------------------------------------------\n");
-                    return false;
-                }
                 indexStart = 1;
                 indexStop = 1;
                 indexStep = 1;
@@ -62,62 +50,40 @@ namespace amongUsFinder
             {
                 //Input parameters for image sequence processing
                 if (!Directory.Exists(loadLocation))
-                {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: Input folder does not exist");
-                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Task terminated ---------------------------------------------------------------------------\n");
-                    return false;
-                }
-                Console.WriteLine($@"{DateTime.Now:HH:mm:ss.fff} | Output location ({Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\YOUR INPUT):");
-                saveLocation = $@"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\{Console.ReadLine()}";
-                if (!Directory.Exists(saveLocation)) Directory.CreateDirectory(saveLocation);
-                else if (Directory.GetFiles(saveLocation, "*.*", SearchOption.TopDirectoryOnly).Length > 0)
+                saveLocation = args[1];
+                string[] loadFolderFiles = Directory.GetFiles(loadLocation, "*.*", SearchOption.TopDirectoryOnly);
+                if (!Directory.Exists(saveLocation))
+                    Directory.CreateDirectory(saveLocation);
+                else if (loadFolderFiles.Length > 0)
                 {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: Output folder is not empty ({saveLocation})");
-                    if (saveLocation != "")
-                    {
-                        Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Do you want to continue? (y/n)");
-                        string input = Console.ReadLine();
-                        if (input == "n")
-                        {
-                            Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Task terminated ---------------------------------------------------------------------------\n");
-                            return false;
-                        }
-                    }
-                    else return false;
+                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Do you want to continue? (y/n) WARNING: Existing files will be deleted");
+                    if (Console.ReadLine() == "n")
+                        return false;
+                    Directory.Delete(saveLocation, true);
+                    Directory.CreateDirectory(saveLocation);
                 }
-                string[] loadFolderFiles = Directory.GetFiles(loadLocation, "*.*", SearchOption.TopDirectoryOnly);
-                indexStart = getInput("Enter start point", Convert.ToInt32(getFileName(loadFolderFiles[0], false).Split('.')[0]));
-                indexStop = getInput("Enter stop point", Convert.ToInt32(getFileName(loadFolderFiles[loadFolderFiles.Length - 1], false).Split('.')[0]));
-                indexStep = getInput("Enter step length", 1);
+                indexStart = Convert.ToInt32(args[2]);
+                indexStop = Convert.ToInt32(args[3]);
+                indexStep = Convert.ToInt32(args[4]);
                 imagesToProcess = roundUpInt(((double)indexStop - indexStart + 1) / indexStep);
 
                 //Check for missing files
                 List<int> filesMissing = new List<int>();
                 for (int i = indexStart; i < indexStop - indexStart + 1; i += indexStep)
-                {
                     if (!File.Exists(loadLocation + $@"\{i:00000}.png"))
-                    {
                         filesMissing.Add(i);
-                    }
-                }
                 //Output error if files are missing
                 if (filesMissing.Count > 0)
                 {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: {filesMissing.Count} of {imagesToProcess} images are missing");
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Do you want to know the missing image names? (y/n)");
-                    string input = Console.ReadLine();
-                    if (input == "y")
-                    {
+                    if (Console.ReadLine() == "y")
                         foreach (var file in filesMissing)
-                        {
                             Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Image {file:00000}.png is missing");
-                        }
-                    }
                     if (loadFolderFiles.Length == 0)
-                    {
                         Directory.Delete(saveLocation, true);
-                    }
-                    Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Task terminated ---------------------------------------------------------------------------\n");
                     return false;
                 }
                 swLogFile = new StreamWriter(saveLocation + @"\log.txt");
@@ -229,9 +195,7 @@ namespace amongUsFinder
             searchQuarter(shapeW, shapeH, splitParameters[3, 0], splitParameters[3, 1], splitParameters[3, 2], splitParameters[3, 3]);
             //Wait for threads to finish
             for (int t = 0; t < threadsQ.Length; t++)
-            {
                 threadsQ[t].Join();
-            }
             return amongUsFound;
 
             void searchQuarter(int mx, int my, int xStart, int yStart, int xStop, int yStop)
@@ -278,46 +242,24 @@ namespace amongUsFinder
                                     {
                                         int match = compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row));
                                         if (amongus[row, column] == 2 && match != 0)
-                                        {
                                             return;
-                                        }
                                         else if (amongus[row, column] == 0 && match == 0)
-                                        {
                                             border++;
-                                        }
                                     }
                                 }
                                 //Check border around amongus
                                 if (x < bmpD[0].Stride - 5 * bytesPerPixel && m == 1 || x > 0 && m == -1)
-                                {
                                     for (int row = 0; row < 5; row++)
-                                    {
                                         if (0 == compareColor(c1, getPixelColor(x + 10 * m, y + row)))
-                                        {
                                             border++;
-                                        }
-                                    }
-                                }
                                 if ((x > 0 && m == -1 || x < bmpD[0].Stride - 5 * bytesPerPixel && m == 1) && border < 5)
-                                {
                                     for (int row = 1; row < 3; row++)
-                                    {
                                         if (0 == compareColor(c1, getPixelColor(x - 10 * m, y + row)))
-                                        {
                                             border++;
-                                        }
-                                    }
-                                }
                                 if (y > 0 && border < 5)
-                                {
                                     for (int column = 1; column < 4; column++)
-                                    {
                                         if (0 == compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y - 1)))
-                                        {
                                             border++;
-                                        }
-                                    }
-                                }
                                 //If amongus found --> highlight amongus on output bitmap
                                 if (border < 5)
                                 {
@@ -368,32 +310,38 @@ namespace amongUsFinder
 
         public void outputProgress()
         {
-            int min = DateTime.Now.Minute;
+            int prev = 0;
             int currentPicturesProcessed = 0;
             double progressState = 0;
+            Console.CursorTop += 2;
             while (progressState < 100)
             {
                 progressState = currentPicturesProcessed / ((double)(indexStop - indexStart + 1) / indexStep) * 100;
-                if (min != DateTime.Now.Minute)
+                if (prev != (int)progressState)
                 {
-                    outputMessage($"({currentPicturesProcessed}|{imagesToProcess}) Progress: {Math.Round(progressState, 2)}% done", true);
-                    min = DateTime.Now.Minute;
+                    Console.SetCursorPosition(0, Console.CursorTop - 2);
+                    outputMessage($"({currentPicturesProcessed}|{imagesToProcess}) Progress: {(int)progressState}% done", true);
+                    Console.Write('[');
+                    for (int i = 1; i < Console.BufferWidth - 1; i++)
+                    {
+                        if (i < progressState / 100 * Console.BufferWidth)
+                            Console.Write('=');
+                        else
+                            Console.Write(' ');
+                    }
+                    Console.Write("]");
+                    prev = (int)progressState;
                 }
                 if (progressState >= 100) break;
-                Thread.Sleep(995);
                 currentPicturesProcessed = 0;
                 foreach (var item in picturesProcessed)
-                {
                     currentPicturesProcessed += item;
-                }
             }
         }
         public void waitMainThreads()
         {
             for (int i = 0; i < mainThreads.Length; i++)
-            {
                 mainThreads[i].Join();
-            }
             processTime = DateTime.Now - startTime;
             outputMessage($"Picture processing completed in {processTime.ToString(@"mm\:ss\.fff")} with an average of {roundUpDouble(processTime.TotalSeconds / imagesToProcess, 4)}s per picture!", true);
         }
@@ -414,9 +362,7 @@ namespace amongUsFinder
         {
             StreamWriter swNum = new StreamWriter(saveLocation + @"\amongUsCount.txt");
             for (int i = 0; i < amongusCount.Length; i++)
-            {
                 swNum.WriteLine(amongusCount[i]);
-            }
             swNum.Close();
             swNum.Dispose();
             outputMessage($@"Txt file generated at {saveLocation}\amongUsCount.txt", true);
@@ -424,15 +370,12 @@ namespace amongUsFinder
         public void generateStatisticImage(string dataInput = null)
         {
             string dataOutput = saveLocation;
-            bool logToFile = true;
             Bitmap output = new Bitmap(1000, 250);
             Graphics g = Graphics.FromImage(output);
-            if (string.IsNullOrEmpty(dataInput)) dataInput = saveLocation + @"\amongUsCount.txt";
+            if (string.IsNullOrEmpty(dataInput))
+                dataInput = saveLocation + @"\amongUsCount.txt";
             else
-            {
                 dataOutput = dataInput.Substring(0, dataInput.LastIndexOf(@"\"));
-                logToFile = false;
-            }
             string[] values = File.ReadAllLines(dataInput);
             g.DrawLine(Pens.Black, 0, 0, output.Width - 1, 0);
             g.DrawLine(Pens.Black, 0, 0, 0, output.Height - 1);
@@ -442,7 +385,8 @@ namespace amongUsFinder
             for (int i = 0; i < values.Length; i++)
             {
                 int value = Convert.ToInt32(values[i]);
-                if (value > maxValue) maxValue = value;
+                if (value > maxValue)
+                    maxValue = value;
             }
             for (int i = 1; i < output.Width - 2; i++)
             {
@@ -453,91 +397,36 @@ namespace amongUsFinder
                 g.DrawLine(Pens.Red, i, output.Height - 2 - (int)Math.Round((double)value / maxValue * (output.Height - 3)), i + 1, output.Height - 2 - (int)Math.Round((double)nextValue / maxValue * (output.Height - 3)));
             }
             output.Save(dataOutput + @"\statistic.png");
-            outputMessage($@"Statistic image generated at {dataOutput}\statistic.png", logToFile);
+            outputMessage($@"Statistic image generated at {dataOutput}\statistic.png", true);
         }
 
-        int getInput(string text, int defaultVal)
-        {
-            bool next = false;
-            int output = defaultVal;
-            while (!next)
-            {
-                outputMessage(text + $" (default: {defaultVal})", false);
-                string input = Console.ReadLine();
-                if (input != "")
-                {
-                    try
-                    {
-                        output = Convert.ToInt32(input);
-                        next = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        outputMessage("Error: " + ex.Message.Trim('.'), false);
-                        next = false;
-                    }
-                }
-                else
-                {
-                    next = true;
-                }
-            }
-            return output;
-        }
         string getFileName(string path, bool returnPath)
         {
             int folderIndex = path.LastIndexOf(@"\");
-            if (returnPath) return path.Substring(0, folderIndex);
-            else return path.Substring(folderIndex + 1);
+            if (returnPath)
+                return path.Substring(0, folderIndex);
+            else
+                return path.Substring(folderIndex + 1);
         }
         public void outputMessage(string output, bool log)
         {
             Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | " + output);
-            if (log) swLogFile.WriteLine($"{DateTime.Now:dd.MM.yyyy}; { DateTime.Now:HH:mm:ss.fff} | " + output);
+            if (log)
+                swLogFile.WriteLine($"{DateTime.Now:dd.MM.yyyy}; { DateTime.Now:HH:mm:ss.fff} | " + output);
         }
         public int roundUpInt(double value)
         {
             int result = (int)value;
-            if (result < value) result++;
+            if (result < value)
+                result++;
             return result;
         }
         double roundUpDouble(double value, int decimalpoint)
         {
             var result = Math.Round(value, decimalpoint);
-            if (result < value) result += Math.Pow(10, -decimalpoint);
+            if (result < value)
+                result += Math.Pow(10, -decimalpoint);
             return result;
-        }
-
-        void startBenchmark(int sh, int xs = 0, int ys = 0)
-        {
-            if (sh == 0 && xs == 0 && ys == 0) s.Restart();
-        }
-        void updateBenchmark(int sh, int it, string action, bool last, int xs = 0, int ys = 0)
-        {
-            if (sh == 0 && xs == 0 && ys == 0 && benchmark)
-            {
-                if (locIteration % it == 0)
-                {
-                    Console.Write($"{s.ElapsedMilliseconds - timeFromLastAction:000}-{action}|");
-                    if (last) Console.WriteLine();
-                    timeFromLastAction = s.ElapsedMilliseconds;
-                }
-            }
-        }
-        void stopBenchmark(int sh, int it, int xs = 0, int ys = 0)
-        {
-            if (sh == 0 && xs == 0 && ys == 0 && benchmark)
-            {
-                s.Stop();
-                iterations++;
-
-                overallTime += s.ElapsedMilliseconds;
-                if (iterations % it == 0)
-                {
-                    Console.WriteLine($"Iteration: {iterations} | {s.ElapsedMilliseconds}ms ({overallTime / iterations}ms average)");
-                    timeFromLastAction = 0;
-                }
-            }
         }
     }
 }
