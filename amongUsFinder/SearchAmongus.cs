@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -33,13 +32,17 @@ namespace amongUsFinder
 
         public bool initializeInputParameters(string[] args)
         {
-            //Console.WriteLine($@"{DateTime.Now:HH:mm:ss.fff} | Input location ({Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Downloads\YOUR INPUT):");
             loadLocation = args[0];
             if (loadLocation.Contains("."))
             {
                 //Input parameters for single picture processing
+                if (args.Length != 1)
+                    return false;
                 if (!File.Exists(loadLocation))
+                {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: Input image does not exist");
+                    return false;
+                }
                 indexStart = 1;
                 indexStop = 1;
                 indexStep = 1;
@@ -49,8 +52,13 @@ namespace amongUsFinder
             else
             {
                 //Input parameters for image sequence processing
+                if (args.Length != 5)
+                    return false;
                 if (!Directory.Exists(loadLocation))
+                {
                     Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} | Error: Input folder does not exist");
+                    return false;
+                }
                 saveLocation = args[1];
                 string[] loadFolderFiles = Directory.GetFiles(loadLocation, "*.*", SearchOption.TopDirectoryOnly);
                 if (!Directory.Exists(saveLocation))
@@ -232,7 +240,7 @@ namespace amongUsFinder
                             c2 = getPixelColor(x + 2 * m, y + 1);
 
                             //Check amongus shape
-                            if (0 != compareColor(c2, getPixelColor(x + 6 * m, y + 1)) || compareColor(c1, c2) == 0 || compareColor(c1, getPixelColor(x - 6 * m, y)) == 0) continue;
+                            if (compareColor(c2, getPixelColor(x + 6 * m, y + 1)) != 0 || compareColor(c1, c2) == 0 || compareColor(c1, getPixelColor(x - 6 * m, y)) == 0) continue;
                             searchShape();
                             void searchShape()
                             {

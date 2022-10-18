@@ -8,7 +8,7 @@ namespace amongUsFinder
         static void Main(string[] args)
         {
             SearchAmongus s = new SearchAmongus();
-            if (args.Length == 5)
+            if (args.Length > 0)
             {
                 if(!s.initializeInputParameters(args))
                     return;
