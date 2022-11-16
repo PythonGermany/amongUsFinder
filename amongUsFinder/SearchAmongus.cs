@@ -109,22 +109,15 @@ namespace amongUsFinder
             mainThreads = new Thread[mainThreadCount];
             threadShift = new int[mainThreadCount];
             for (int i = 0; i < threadShift.Length; i++)
-            {
                 threadShift[i] = i;
-            }
         }
         public void startMainThreads()
         {
             int ct = 0;
             foreach (int value in threadShift)
-            {
-                mainThreads[ct] = new Thread(() => processImageSequence(value, loadLocation, saveLocation));
-                ct++;
-            }
+                mainThreads[ct++] = new Thread(() => processImageSequence(value, loadLocation, saveLocation));
             for (int i = 0; i < mainThreads.Length; i++)
-            {
                 mainThreads[i].Start();
-            }
         }
 
         public void processImageSequence(int shift, string loadPath, string savePath)
@@ -359,10 +352,7 @@ namespace amongUsFinder
             {
                 int iNewName = 0;
                 for (int i = indexStart; i <= indexStop; i += indexStep)
-                {
-                    iNewName++;
-                    File.Move($@"{saveLocation}\{i:00000}.png", $@"{saveLocation}\{iNewName:00000}.png");
-                }
+                    File.Move($@"{saveLocation}\{i:00000}.png", $@"{saveLocation}\{++iNewName:00000}.png");
                 outputMessage($"Files renamed (from 00001 to {iNewName:00000})", true);
             }
         }
