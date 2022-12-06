@@ -1,5 +1,7 @@
 A fast and efficient script to search pixel art images for little amongi like from the reddit r/place 2022 event.
 
+Use: [program name].exe [source path/file] [destination path/file] [start index] [stop index] [index step]
+
 It is possible to process either single images or an image sequence named from 00000 to XXXXX.
 It is also possible to process every "n"th image in the sequence e.g. n=2 == skip skip every 2nd picture in the sequence.
 The program also outputs a txt file containing the number of amongi counted in every image of the sequence.
