@@ -317,7 +317,7 @@ namespace amongUsFinder
             Console.CursorTop += 2;
             while (progressState < 100)
             {
-                progressState = currentPicturesProcessed / ((double)(indexStop - indexStart + 1) / indexStep) * 100;
+                progressState = currentPicturesProcessed / ((indexStop - indexStart + 1.0) / indexStep) * 100;
                 if (prev != (int)progressState)
                 {
                     Console.SetCursorPosition(0, Console.CursorTop - 2);
