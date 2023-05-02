@@ -213,7 +213,7 @@ namespace amongUsFinder
                     for (int x = (xStart + mx) * bytesPerPixel; x < (xStart + xStop) * bytesPerPixel; x += bytesPerPixel)
                     {
                         //Calculate new pixel value (R,G,B)
-                        currentLineB[x + 3] = currentLine[x + 3];
+                        currentLineB[x + 3] = 255;
                         currentLineB[x + 2] = (byte)(currentLine[x + 2] * 0.25);
                         currentLineB[x + 1] = (byte)(currentLine[x + 1] * 0.25);
                         currentLineB[x] = (byte)(currentLine[x] * 0.25);
@@ -233,7 +233,7 @@ namespace amongUsFinder
                             c2 = getPixelColor(x + 2 * m, y + 1);
 
                             //Check amongus shape
-                            if (compareColor(c2, getPixelColor(x + 6 * m, y + 1)) != 0 || compareColor(c1, c2) == 0 || compareColor(c1, getPixelColor(x - 6 * m, y)) == 0) continue;
+                            if (!compareColor(c2, getPixelColor(x + 6 * m, y + 1)) || compareColor(c1, c2) || compareColor(c1, getPixelColor(x - 6 * m, y))) continue;
                             searchShape();
                             void searchShape()
                             {
@@ -241,25 +241,25 @@ namespace amongUsFinder
                                 {
                                     for (int column = 0; column < shapeW + 1; column++)
                                     {
-                                        int match = compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row));
-                                        if (amongus[row, column] == 2 && match != 0)
+                                        bool match = compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row));
+                                        if (amongus[row, column] == 2 && !match)
                                             return;
-                                        else if (amongus[row, column] == 0 && match == 0)
+                                        else if (amongus[row, column] == 0 && match)
                                             border++;
                                     }
                                 }
                                 //Check border around amongus
                                 if (x < bmpD[0].Stride - 5 * bytesPerPixel && m == 1 || x > 0 && m == -1)
                                     for (int row = 0; row < 5; row++)
-                                        if (0 == compareColor(c1, getPixelColor(x + 10 * m, y + row)))
+                                        if (compareColor(c1, getPixelColor(x + 10 * m, y + row)))
                                             border++;
                                 if ((x > 0 && m == -1 || x < bmpD[0].Stride - 5 * bytesPerPixel && m == 1) && border < 5)
                                     for (int row = 1; row < 3; row++)
-                                        if (0 == compareColor(c1, getPixelColor(x - 10 * m, y + row)))
+                                        if (compareColor(c1, getPixelColor(x - 10 * m, y + row)))
                                             border++;
                                 if (y > 0 && border < 5)
                                     for (int column = 1; column < 4; column++)
-                                        if (0 == compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y - 1)))
+                                        if (compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y - 1)))
                                             border++;
                                 //If amongus found --> highlight amongus on output bitmap
                                 if (border < 5)
@@ -269,25 +269,13 @@ namespace amongUsFinder
                                         byte* currentLine = ptr[1] + (y + row) * stride;
                                         for (int column = 0; column < 4; column++)
                                         {
-                                            int xLox = x - (6 - column * bytesPerPixel) * m;
+                                            int xLox = (x - (6 - column * bytesPerPixel) * m) / bytesPerPixel;
                                             if (amongus[row, column] == 2)
-                                            {
-                                                currentLine[xLox + 2] = c1[2];
-                                                currentLine[xLox + 1] = c1[1];
-                                                currentLine[xLox] = c1[0];
-                                            }
-                                            else if (amongus[row, column] > 2 && 0 == compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row)))
-                                            {
-                                                currentLine[xLox + 2] = c1[2];
-                                                currentLine[xLox + 1] = c1[1];
-                                                currentLine[xLox] = c1[0];
-                                            }
+                                                ((int *)currentLine)[xLox] = *((int *)c1);
+                                            else if (amongus[row, column] > 2 && compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row)))
+                                                ((int*)currentLine)[xLox] = *((int*)c1);
                                             else if (amongus[row, column] == 1)
-                                            {
-                                                currentLine[xLox + 2] = c2[2];
-                                                currentLine[xLox + 1] = c2[1];
-                                                currentLine[xLox] = c2[0];
-                                            }
+                                                ((int*)currentLine)[xLox] = *((int*)c2);
                                         }
                                     }
                                     amongUsFound++;
@@ -302,9 +290,9 @@ namespace amongUsFinder
                 {
                     return ptr[0] + y * stride + x;
                 }
-                int compareColor(byte* color1, byte* color2)
+                bool compareColor(byte* color1, byte* color2)
                 {
-                    return (color1[0] - color2[0]) * (color1[0] - color2[0]) + (color1[1] - color2[1]) * (color1[1] - color2[1]) + (color1[2] - color2[2]) * (color1[2] - color2[2]);
+                    return (((int*)color1)[0] == ((int*)color2)[0]);
                 }
             }
         }
@@ -401,6 +389,8 @@ namespace amongUsFinder
         string getFileName(string path, bool returnPath)
         {
             int folderIndex = path.LastIndexOf(@"\");
+            if (folderIndex == -1)
+                folderIndex = path.LastIndexOf(@"/");
             if (returnPath)
                 return path.Substring(0, folderIndex);
             else
