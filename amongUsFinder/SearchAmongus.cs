@@ -124,25 +124,26 @@ namespace amongUsFinder
         {
             Thread.CurrentThread.Priority = ThreadPriority.Highest;
             Thread[] threadsQ = new Thread[3];
+            Thread saveThread = null;
             picturesProcessed[shift] = 0;
             int loopId = shift;
             Bitmap[] bmp = new Bitmap[2];
             BitmapData[] bmpData = new BitmapData[2];
 
             byte*[] ptrBmp;
-            _ = initializeDataBitmaps($@"{loadLocation}\{indexStart + shift * indexStep:00000}.png", bmp, bmpData);
+            _ = initializeDataBitmaps($@"{loadLocation}\{indexStart + shift * indexStep:00000}.png", bmp, bmpData, null);
             int[,] splitParameter = generateSplitParameter(bmp[0]);
             int bytesPerPixel = Image.GetPixelFormatSize(bmp[0].PixelFormat) / 8;
 
             for (int i = indexStart + shift * indexStep; i <= indexStop; i += mainThreadCount * indexStep)
             {
-                ptrBmp = initializeDataBitmaps($@"{loadPath}\{i:00000}.png", bmp, bmpData);
+                ptrBmp = initializeDataBitmaps($@"{loadPath}\{i:00000}.png", bmp, bmpData, saveThread);
                 amongusCount[loopId] = startQuadThreads(ptrBmp, bmpData, threadsQ, splitParameter, bytesPerPixel);
+                string fileName = $@"{savePath}\{i:00000}.png";
+                saveThread = new Thread(() => saveFile(fileName, bmp[1], bmpData[1]));
                 bmp[0].UnlockBits(bmpData[0]);
-                bmp[1].UnlockBits(bmpData[1]);
-                bmp[1].Save($@"{savePath}\{i:00000}.png");
                 bmp[0].Dispose();
-                bmp[1].Dispose();
+                saveThread.Start();
                 loopId += mainThreadCount;
                 picturesProcessed[shift]++;
             }
@@ -150,26 +151,38 @@ namespace amongUsFinder
         public void processImage(string loadFile, string savePath)
         {
             Thread[] threadsQ = new Thread[3];
+            Thread saveThread;
             Bitmap[] bmp = new Bitmap[2];
             BitmapData[] bmpData = new BitmapData[2];
-            byte*[] ptrBmp = initializeDataBitmaps(loadFile, bmp, bmpData);
+            byte*[] ptrBmp = initializeDataBitmaps(loadFile, bmp, bmpData, null);
             int[,] splitParameter = generateSplitParameter(bmp[0]);
             int bytesPerPixel = Image.GetPixelFormatSize(bmp[0].PixelFormat) / 8;
             amongusCount[0] = startQuadThreads(ptrBmp, bmpData, threadsQ, splitParameter, bytesPerPixel);
+            saveThread = new Thread(() => saveFile(savePath, bmp[1], bmpData[1]));
             bmp[0].UnlockBits(bmpData[0]);
-            bmp[1].UnlockBits(bmpData[1]);
-            bmp[1].Save($"{savePath}");
             bmp[0].Dispose();
-            bmp[1].Dispose();
+            saveThread.Start();
         }
 
-        public byte*[] initializeDataBitmaps(string loadPath, Bitmap[] bitmap, BitmapData[] bitmapData)
+        private void saveFile(string savePath, Bitmap bmp, BitmapData bmpData)
         {
-            bitmap[0] = new Bitmap(loadPath);
-            bitmap[1] = new Bitmap(bitmap[0].Width, bitmap[0].Height, bitmap[0].PixelFormat);
-            bitmapData[0] = bitmap[0].LockBits(new Rectangle(0, 0, bitmap[0].Width, bitmap[0].Height), ImageLockMode.ReadOnly, bitmap[0].PixelFormat);
-            bitmapData[1] = bitmap[1].LockBits(new Rectangle(0, 0, bitmap[1].Width, bitmap[1].Height), ImageLockMode.WriteOnly, bitmap[1].PixelFormat);
-            return new byte*[2] { (byte*)bitmapData[0].Scan0, (byte*)bitmapData[1].Scan0 };
+            if (bmp != null && bmpData != null)
+            {
+                bmp.UnlockBits(bmpData);
+                bmp.Save(savePath);
+                bmp.Dispose();
+            }
+        }
+
+        public byte*[] initializeDataBitmaps(string loadPath, Bitmap[] bmp, BitmapData[] bmpData, Thread saveThread)
+        {
+            bmp[0] = new Bitmap(loadPath);
+            bmpData[0] = bmp[0].LockBits(new Rectangle(0, 0, bmp[0].Width, bmp[0].Height), ImageLockMode.ReadOnly, bmp[0].PixelFormat);
+            if (saveThread != null)
+                saveThread.Join();
+            bmp[1] = new Bitmap(bmp[0].Width, bmp[0].Height, bmp[0].PixelFormat);
+            bmpData[1] = bmp[1].LockBits(new Rectangle(0, 0, bmp[1].Width, bmp[1].Height), ImageLockMode.WriteOnly, bmp[1].PixelFormat);
+            return new byte*[2] { (byte*)bmpData[0].Scan0, (byte*)bmpData[1].Scan0 };
         }
         public int[,] generateSplitParameter(Bitmap bitmap)
         {
