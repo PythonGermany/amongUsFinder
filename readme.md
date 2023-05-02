@@ -9,5 +9,5 @@ The program also outputs a txt file containing the number of amongi counted in e
 
 The output images can be processed into a video file with other software. The results for the r/place 2022 event are something like this: https://youtu.be/mVmTI0B95Kk
 
-![Image](https://raw.githubusercontent.com/PythonGermany/amongUsFinder/main/image_assets/final_place.png)
 ![Image](https://raw.githubusercontent.com/PythonGermany/amongUsFinder/main/image_assets/final_place_searched.png)
+![Image](https://raw.githubusercontent.com/PythonGermany/amongUsFinder/main/image_assets/final_place.png)
