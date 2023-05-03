@@ -176,12 +176,16 @@ namespace amongUsFinder
 
         public byte*[] initializeDataBitmaps(string loadPath, Bitmap[] bmp, BitmapData[] bmpData, Thread saveThread)
         {
+            Bitmap temp;
+            BitmapData tempData;
             bmp[0] = new Bitmap(loadPath);
             bmpData[0] = bmp[0].LockBits(new Rectangle(0, 0, bmp[0].Width, bmp[0].Height), ImageLockMode.ReadOnly, bmp[0].PixelFormat);
+            temp = new Bitmap(bmp[0].Width, bmp[0].Height, bmp[0].PixelFormat);
+            tempData = temp.LockBits(new Rectangle(0, 0, temp.Width, temp.Height), ImageLockMode.WriteOnly, temp.PixelFormat);
             if (saveThread != null)
                 saveThread.Join();
-            bmp[1] = new Bitmap(bmp[0].Width, bmp[0].Height, bmp[0].PixelFormat);
-            bmpData[1] = bmp[1].LockBits(new Rectangle(0, 0, bmp[1].Width, bmp[1].Height), ImageLockMode.WriteOnly, bmp[1].PixelFormat);
+            bmp[1] = temp;
+            bmpData[1] = tempData;
             return new byte*[2] { (byte*)bmpData[0].Scan0, (byte*)bmpData[1].Scan0 };
         }
         public int[,] generateSplitParameter(Bitmap bitmap)
