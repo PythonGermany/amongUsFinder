@@ -261,23 +261,19 @@ namespace amongUsFinder
                                         bool match = compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row));
                                         if (amongus[row, column] == 2 && !match)
                                             return;
-                                        else if (amongus[row, column] == 0 && match)
-                                            border++;
+                                        border += (amongus[row, column] == 0 && match) ? 1 : 0;
                                     }
                                 }
                                 //Check border around amongus
                                 if (x < bmpD[0].Stride - 5 * bytesPerPixel && m == 1 || x > 0 && m == -1)
                                     for (int row = 0; row < 5; row++)
-                                        if (compareColor(c1, getPixelColor(x + 10 * m, y + row)))
-                                            border++;
+                                        border += (compareColor(c1, getPixelColor(x + 10 * m, y + row))) ? 1 : 0;
                                 if ((x > 0 && m == -1 || x < bmpD[0].Stride - 5 * bytesPerPixel && m == 1) && border < 5)
                                     for (int row = 1; row < 3; row++)
-                                        if (compareColor(c1, getPixelColor(x - 10 * m, y + row)))
-                                            border++;
+                                        border += (compareColor(c1, getPixelColor(x - 10 * m, y + row))) ? 1 : 0;
                                 if (y > 0 && border < 5)
                                     for (int column = 1; column < 4; column++)
-                                        if (compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y - 1)))
-                                            border++;
+                                        border += (compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y - 1))) ? 1 : 0;
                                 //If amongus found --> highlight amongus on output bitmap
                                 if (border < 5)
                                 {
