@@ -166,12 +166,9 @@ namespace amongUsFinder
 
         private void saveFile(string savePath, Bitmap bmp, BitmapData bmpData)
         {
-            if (bmp != null && bmpData != null)
-            {
-                bmp.UnlockBits(bmpData);
-                bmp.Save(savePath);
-                bmp.Dispose();
-            }
+            bmp.UnlockBits(bmpData);
+            bmp.Save(savePath);
+            bmp.Dispose();
         }
 
         public byte*[] initializeDataBitmaps(string loadPath, Bitmap[] bmp, BitmapData[] bmpData, Thread saveThread)
