@@ -199,6 +199,7 @@ namespace amongUsFinder
         public int startQuadThreads(byte*[] ptr, BitmapData[] bmpD, Thread[] threadsQ, int[,] splitParameters, int bytesPerPixel)
         {
             int amongUsFound = 0;
+            int stride = bmpD[0].Stride;
             threadsQ[0] = new Thread(() => searchQuarter(0, 0, splitParameters[0, 0], splitParameters[0, 1], splitParameters[0, 2], splitParameters[0, 3]));
             threadsQ[1] = new Thread(() => searchQuarter(shapeW, 0, splitParameters[1, 0], splitParameters[1, 1], splitParameters[1, 2], splitParameters[1, 3]));
             threadsQ[2] = new Thread(() => searchQuarter(0, shapeH, splitParameters[2, 0], splitParameters[2, 1], splitParameters[2, 2], splitParameters[2, 3]));
@@ -217,7 +218,8 @@ namespace amongUsFinder
             {
                 byte* c1 = stackalloc byte[3];
                 byte* c2 = stackalloc byte[3];
-                int stride = bmpD[0].Stride;
+                int border = 0;
+                bool match;
 
                 //Darken output bitmap
                 for (int y = yStart + my; y < yStart + yStop; y++)
@@ -241,8 +243,7 @@ namespace amongUsFinder
                     {
                         for (int m = -1; m <= 1; m += 2)
                         {
-                            int border = 0;
-
+                            border = 0;
                             c1 = getPixelColor(x + 2 * m, y);
                             c2 = getPixelColor(x + 2 * m, y + 1);
 
@@ -255,7 +256,7 @@ namespace amongUsFinder
                                 {
                                     for (int column = 0; column < shapeW + 1; column++)
                                     {
-                                        bool match = compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row));
+                                        match = compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y + row));
                                         if (amongus[row, column] == 2 && !match)
                                             return;
                                         border += (amongus[row, column] == 0 && match) ? 1 : 0;
@@ -263,14 +264,13 @@ namespace amongUsFinder
                                 }
                                 //Check border around amongus
                                 if (x < bmpD[0].Stride - 5 * bytesPerPixel && m == 1 || x > 0 && m == -1)
-                                    for (int row = 0; row < 5; row++)
+                                    for (int row = 0; row < 5 && border < 5; row++)
                                         border += (compareColor(c1, getPixelColor(x + 10 * m, y + row))) ? 1 : 0;
                                 if ((x > 0 && m == -1 || x < bmpD[0].Stride - 5 * bytesPerPixel && m == 1) && border < 5)
-                                    for (int row = 1; row < 3; row++)
+                                    for (int row = 1; row < 3 && border < 5; row++)
                                         border += (compareColor(c1, getPixelColor(x - 10 * m, y + row))) ? 1 : 0;
-                                if (y > 0 && border < 5)
-                                    for (int column = 1; column < 4; column++)
-                                        border += (compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y - 1))) ? 1 : 0;
+                                for (int column = 1; column < 4 && y > 0 && border < 5; column++)
+                                    border += (compareColor(c1, getPixelColor(x - (6 - column * bytesPerPixel) * m, y - 1))) ? 1 : 0;
                                 //If amongus found --> highlight amongus on output bitmap
                                 if (border < 5)
                                 {
