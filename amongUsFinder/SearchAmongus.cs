@@ -216,8 +216,8 @@ namespace amongUsFinder
 
             void searchQuarter(int mx, int my, int xStart, int yStart, int xStop, int yStop)
             {
-                byte* c1 = stackalloc byte[3];
-                byte* c2 = stackalloc byte[3];
+                byte* c1;
+                byte* c2;
                 int border = 0;
                 bool match;
 
