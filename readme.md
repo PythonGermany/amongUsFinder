@@ -1,6 +1,6 @@
 # A fast and efficient script to search pixel art images for little amongi e.g. for the reddit r/place 2022/23 event
 
-* Use image sequence: [program name].exe [source path] [destination path] [start index] [stop index] [index step]
+* Use image sequence: [program name].exe [absolute source path] [absolute destination path] [start index] [stop index] [index step]
 * Use single image: [program name].exe [source file]
 
 It is possible to process either single images or an image sequence named from 00000 to XXXXX.<br />
