@@ -9,9 +9,9 @@ The program also outputs a txt file containing the number of amongi counted in e
 
 The output images can be processed into a video file with other software.<br />
 
-[Watch a timelapse of the whole 2023 event here](https://youtu.be/lHJCgX1YKzs)
+[Watch a timelapse of the complete 2023 event here](https://youtu.be/lHJCgX1YKzs)
 
-[Watch a timelapse of the whole 2022 event here](https://youtu.be/mVmTI0B95Kk)
+[Watch a timelapse of the complete 2022 event here](https://youtu.be/mVmTI0B95Kk)
 ![Image](https://raw.githubusercontent.com/PythonGermany/amongUsFinder/main/image_assets/final_place_searched.png)
 ![Image](https://raw.githubusercontent.com/PythonGermany/amongUsFinder/main/image_assets/final_place.png)
 
