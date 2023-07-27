@@ -401,6 +401,10 @@ namespace amongUsFinder
             int folderIndex = path.LastIndexOf(@"\");
             if (folderIndex == -1)
                 folderIndex = path.LastIndexOf(@"/");
+            if (folderIndex == -1 && returnPath)
+                return (string.Empty);
+            else if (folderIndex == -1 && !returnPath)
+                return (path);
             if (returnPath)
                 return path.Substring(0, folderIndex);
             else
